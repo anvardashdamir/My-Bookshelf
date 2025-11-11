@@ -121,8 +121,10 @@ class LoginViewController: UIViewController {
         guard isValidEmail(email) else { showAlert(message: "Please enter a valid email."); return }
         guard !password.isEmpty else { showAlert(message: "Please enter your password."); return }
 
-        // TODO: Hook up to your auth backend
-        showAlert(title: "Success", message: "Logged in (mock)")
+        
+        let vc = BookshelfViewController()
+        navigationController?.pushViewController(vc, animated: true)        
+        print("Successful login!")
     }
 
     @objc private func didTapRegisterPrompt() {

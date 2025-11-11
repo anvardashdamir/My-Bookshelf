@@ -156,17 +156,11 @@ class RegisterViewController: UIViewController {
         // TODO: Hook up to your auth backend
         showAlert(title: "Success", message: "Account created (mock)")
     }
-
+    
     @objc private func didTapLoginPrompt() {
-        // Navigate to Login screen
-        let vc = LoginViewController()
-        if let nav = navigationController {
-            nav.pushViewController(vc, animated: true)
-        } else {
-            present(UINavigationController(rootViewController: vc), animated: true)
-        }
+        self.dismiss(animated: true, completion: nil)
     }
-
+    
     // MARK: - Helpers
     private func isValidEmail(_ email: String) -> Bool {
         let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
