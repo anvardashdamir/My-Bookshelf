@@ -118,13 +118,22 @@ class LoginViewController: UIViewController {
         let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let password = passwordField.text ?? ""
 
-        guard isValidEmail(email) else { showAlert(message: "Please enter a valid email."); return }
-        guard !password.isEmpty else { showAlert(message: "Please enter your password."); return }
+        guard isValidEmail(email) else {
+            showAlert(message: "Please enter a valid email.")
+            return
+        }
+        guard !password.isEmpty else {
+            showAlert(message: "Please enter your password.")
+            return
+        }
 
-        
-        let vc = BookshelfViewController()
-        navigationController?.pushViewController(vc, animated: true)        
-        print("Successful login!")
+        do {
+            try AuthManager.shared.login(email: email, password: password)
+            print("Successful login!")
+            switchToMainInterface()
+        } catch {
+            showAlert(message: error.localizedDescription)
+        }
     }
 
     @objc private func didTapRegisterPrompt() {
@@ -136,6 +145,14 @@ class LoginViewController: UIViewController {
         }
     }
 
+    // MARK: - Navigation
+    private func switchToMainInterface() {
+        // Switch root to RootTabBarController after login
+        guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
+        let tabBar = MainViewController()
+        sceneDelegate.window?.rootViewController = tabBar
+    }
+
     // MARK: - Helpers
     private func isValidEmail(_ email: String) -> Bool {
         let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
@@ -145,7 +162,9 @@ class LoginViewController: UIViewController {
     }
 
     private func showAlert(title: String = "", message: String) {
-        let ac = UIAlertController(title: title.isEmpty ? nil : title, message: message, preferredStyle: .alert)
+        let ac = UIAlertController(title: title.isEmpty ? nil : title,
+                                   message: message,
+                                   preferredStyle: .alert)
         ac.addAction(UIAlertAction(title: "OK", style: .default))
         present(ac, animated: true)
     }

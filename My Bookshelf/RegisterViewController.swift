@@ -148,17 +148,46 @@ class RegisterViewController: UIViewController {
         let password = passwordField.text ?? ""
         let confirm = confirmPasswordField.text ?? ""
 
-        guard !name.isEmpty else { showAlert(message: "Please enter your name."); return }
-        guard isValidEmail(email) else { showAlert(message: "Please enter a valid email."); return }
-        guard password.count >= 6 else { showAlert(message: "Password must be at least 6 characters."); return }
-        guard password == confirm else { showAlert(message: "Passwords do not match."); return }
+        guard !name.isEmpty else {
+            showAlert(message: "Please enter your name.")
+            return
+        }
+        guard isValidEmail(email) else {
+            showAlert(message: "Please enter a valid email.")
+            return
+        }
+        guard password.count >= 6 else {
+            showAlert(message: "Password must be at least 6 characters.")
+            return
+        }
+        guard password == confirm else {
+            showAlert(message: "Passwords do not match.")
+            return
+        }
 
-        // TODO: Hook up to your auth backend
-        showAlert(title: "Success", message: "Account created (mock)")
+        do {
+            try AuthManager.shared.register(email: email, password: password)
+            print("Registered & logged in as \(email)")
+            switchToMainInterface()
+        } catch {
+            showAlert(message: error.localizedDescription)
+        }
     }
     
     @objc private func didTapLoginPrompt() {
-        self.dismiss(animated: true, completion: nil)
+        // Works for both push and modal
+        if let nav = navigationController, nav.viewControllers.first != self {
+            nav.popViewController(animated: true)
+        } else {
+            dismiss(animated: true, completion: nil)
+        }
+    }
+    
+    // MARK: - Navigation
+    private func switchToMainInterface() {
+        guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
+        let tabBar = MainViewController()
+        sceneDelegate.window?.rootViewController = tabBar
     }
     
     // MARK: - Helpers
@@ -170,7 +199,9 @@ class RegisterViewController: UIViewController {
     }
 
     private func showAlert(title: String = "", message: String) {
-        let ac = UIAlertController(title: title.isEmpty ? nil : title, message: message, preferredStyle: .alert)
+        let ac = UIAlertController(title: title.isEmpty ? nil : title,
+                                   message: message,
+                                   preferredStyle: .alert)
         ac.addAction(UIAlertAction(title: "OK", style: .default))
         present(ac, animated: true)
     }
