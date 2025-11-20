@@ -10,7 +10,6 @@ import UIKit
 final class ShelfViewController: UIViewController {
 
     // MARK: - UI
-
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
