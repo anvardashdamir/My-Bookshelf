@@ -11,7 +11,6 @@ final class ShelfBooksViewController: UIViewController {
 
     private let viewModel: ShelfBooksViewModel
 
-    // Temporary UI – later replace with table/collection of books
     private let infoLabel: UILabel = {
         let label = UILabel()
         label.textAlignment = .center
@@ -36,7 +35,7 @@ final class ShelfBooksViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = UIColor.primary
         title = viewModel.shelf.name
         setupUI()
     }

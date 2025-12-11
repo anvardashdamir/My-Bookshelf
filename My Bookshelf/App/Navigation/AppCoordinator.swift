@@ -23,7 +23,7 @@ final class AppCoordinator: Coordinator {
         // Create root view controllers for each tab
         let shelfNav = UINavigationController(rootViewController: ShelfViewController())
         let exploreNav = UINavigationController(rootViewController: ExploreViewController())
-        let listsNav = UINavigationController(rootViewController: ListsViewController())
+        let listsNav = UINavigationController(rootViewController: FavouriteBooksViewController())
         let settingsNav = UINavigationController(rootViewController: SettingsViewController())
 
         shelfNav.tabBarItem = UITabBarItem(
@@ -39,7 +39,7 @@ final class AppCoordinator: Coordinator {
         )
 
         listsNav.tabBarItem = UITabBarItem(
-            title: "Lists",
+            title: "Favourites",
             image: UIImage(systemName: "bookmark"),
             selectedImage: UIImage(systemName: "bookmark.fill")
         )

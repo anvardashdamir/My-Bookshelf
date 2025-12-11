@@ -8,6 +8,12 @@
 import Foundation
 import UIKit
 
+struct BookListItem: Identifiable, Equatable {
+    let id: UUID
+    let title: String
+    var books: [Book]
+}
+
 final class ListTableViewCell: UITableViewCell {
 
     static let reuseIdentifier = "ListTableViewCell"

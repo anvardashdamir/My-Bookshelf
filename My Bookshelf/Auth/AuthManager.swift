@@ -16,7 +16,6 @@ final class AuthManager {
     private init() {}
     
     // MARK: - Public
-    
     var currentUserEmail: String? {
         UserDefaults.standard.string(forKey: currentUserKey)
     }
@@ -58,7 +57,6 @@ final class AuthManager {
     }
     
     // MARK: - Private
-    
     private func loadUsers() -> [String: String] {
         (UserDefaults.standard.dictionary(forKey: usersKey) as? [String: String]) ?? [:]
     }

@@ -36,7 +36,6 @@ final class ExploreViewModel {
     // MARK: - Public Methods
 
     func loadInitialData() {
-        // You can tune these queries / subjects later
         fetchBestOfMonth()
         fetchBrandNew()
         fetchFantasy()
@@ -51,7 +50,6 @@ final class ExploreViewModel {
     }
 
     // MARK: - Networking
-
     private func fetchBestOfMonth() {
         // Example: treat "bestseller" search as "best of month" (for demo)
         let url = OpenLibraryAPI.searchBooks("bestseller")

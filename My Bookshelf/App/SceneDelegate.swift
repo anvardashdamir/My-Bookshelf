@@ -20,19 +20,22 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         self.window = window
         self.appCoordinator = appCoordinator
         
+        if let savedStyle = UserDefaults.standard.string(forKey: "userInterfaceStyle") {
+            window.overrideUserInterfaceStyle = savedStyle == "dark" ? .dark : .light
+        }
+
         appCoordinator.start()
-        
         
 //        if AuthManager.shared.isLoggedIn {
 //            let mainVC = MainViewController()
-//            window?.rootViewController = mainVC
+//            window.rootViewController = mainVC
 //        } else {
 //            let loginVC = LoginViewController()
 //            let nav = UINavigationController(rootViewController: loginVC)
-//            window?.rootViewController = nav
+//            window.rootViewController = nav
 //        }
 //        
-//        window?.makeKeyAndVisible()
+//        window.makeKeyAndVisible()
     }
 
     func sceneDidDisconnect(_ scene: UIScene) {

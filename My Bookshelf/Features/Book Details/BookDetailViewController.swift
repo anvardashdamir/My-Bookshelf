@@ -14,7 +14,6 @@ final class BookDetailViewController: UIViewController {
     private var workDetail: WorkDetail?
 
     // MARK: - UI
-
     private let scrollView = UIScrollView()
     private let contentView = UIStackView()
 
@@ -73,7 +72,6 @@ final class BookDetailViewController: UIViewController {
     }()
 
     // MARK: - Init
-
     init(book: Book) {
         self.book = book
         super.init(nibName: nil, bundle: nil)
@@ -84,7 +82,6 @@ final class BookDetailViewController: UIViewController {
     }
 
     // MARK: - Lifecycle
-
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
@@ -93,10 +90,21 @@ final class BookDetailViewController: UIViewController {
         setupUI()
         configureWithBaseBook()
         fetchWorkDetail()
+        
+        navigationItem.rightBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .add,
+            target: self,
+            action: #selector(addBookToFavourites)
+        )
     }
-
+    
     // MARK: - Setup
-
+    @objc private func addBookToFavourites() {
+        showAddedToFavoritesAnimation()
+        FavouriteBooksManager.shared.add(book)
+    }
+    
+    
     private func setupUI() {
         scrollView.alwaysBounceVertical = true
         view.addSubview(scrollView)
@@ -133,7 +141,7 @@ final class BookDetailViewController: UIViewController {
 
         contentView.addArrangedSubview(headerStack)
 
-        coverImageView.heightAnchor.constraint(equalToConstant: 220).isActive = true
+        coverImageView.heightAnchor.constraint(equalToConstant: 550).isActive = true
 
         contentView.addArrangedSubview(descriptionTitleLabel)
         contentView.addArrangedSubview(descriptionLabel)
@@ -210,6 +218,5 @@ final class BookDetailViewController: UIViewController {
             subjectsLabel.text = "No subjects available."
         }
 
-        // If cover not present in base book, you could also use detail.covers?.first here
     }
 }

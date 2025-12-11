@@ -140,7 +140,7 @@ final class ExploreViewController: UIViewController {
             elementKind: UICollectionView.elementKindSectionHeader,
             alignment: .top
         )
-        header.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16)
+        header.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0)
         return header
     }
 }
@@ -159,7 +159,7 @@ extension ExploreViewController: UICollectionViewDataSource {
         let books = viewModel.books(in: sectionType)
         switch sectionType {
         case .bestOfMonth:
-            return 1 // show only first book as hero; cell will pick first
+            return 1 // show only first book as hero
         default:
             return books.count
         }

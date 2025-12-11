@@ -86,7 +86,6 @@ final class BestOfMonthCell: UICollectionViewCell {
 
         if let coverId = book.coverId,
            let url = URL(string: OpenLibraryAPI.coverURL(id: coverId, size: "L")) {
-            // Simple image loading (you can later replace with a real ImageLoader)
             loadImage(from: url)
         } else {
             imageView.image = UIImage(systemName: "book")
@@ -95,7 +94,6 @@ final class BestOfMonthCell: UICollectionViewCell {
     }
 
     private func loadImage(from url: URL) {
-        // very basic; you can later move to ImageLoader with cache
         URLSession.shared.dataTask(with: url) { [weak self] data, _, _ in
             guard let self = self,
                   let data = data,
