@@ -140,7 +140,7 @@ final class ExploreViewController: UIViewController {
             elementKind: UICollectionView.elementKindSectionHeader,
             alignment: .top
         )
-        header.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0)
+        header.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16)
         return header
     }
 }

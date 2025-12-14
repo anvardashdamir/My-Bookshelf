@@ -8,6 +8,8 @@
 import UIKit
 
 class RegisterViewController: UIViewController {
+    
+    weak var delegate: LoginViewControllerDelegate?
 
     // MARK: - UI
     private let titleLabel: UILabel = {
@@ -19,55 +21,18 @@ class RegisterViewController: UIViewController {
         return label
     }()
 
-    private let nameField: UITextField = {
-        let tf = UITextField()
-        tf.placeholder = "Full name"
-        tf.autocapitalizationType = .words
-        tf.autocorrectionType = .no
-        tf.borderStyle = .roundedRect
-        tf.returnKeyType = .next
-        tf.translatesAutoresizingMaskIntoConstraints = false
-        return tf
-    }()
-
-    private let emailField: UITextField = {
-        let tf = UITextField()
-        tf.placeholder = "Email"
-        tf.keyboardType = .emailAddress
-        tf.autocapitalizationType = .none
-        tf.autocorrectionType = .no
-        tf.borderStyle = .roundedRect
-        tf.textContentType = .emailAddress
-        tf.returnKeyType = .next
-        tf.translatesAutoresizingMaskIntoConstraints = false
-        return tf
-    }()
-
-    private let passwordField: UITextField = {
-        let tf = UITextField()
-        tf.placeholder = "Password"
-        tf.isSecureTextEntry = true
-        tf.autocapitalizationType = .none
-        tf.autocorrectionType = .no
-        tf.borderStyle = .roundedRect
+    private let nameField = GradientTextField.name(placeholder: "Full name")
+    
+    private let emailField = GradientTextField.email(placeholder: "Email")
+    
+    private let passwordField: GradientTextField = {
+        let tf = GradientTextField.password(placeholder: "Password")
         tf.textContentType = .newPassword
         tf.returnKeyType = .next
-        tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
     }()
-
-    private let confirmPasswordField: UITextField = {
-        let tf = UITextField()
-        tf.placeholder = "Confirm password"
-        tf.isSecureTextEntry = true
-        tf.autocapitalizationType = .none
-        tf.autocorrectionType = .no
-        tf.borderStyle = .roundedRect
-        tf.textContentType = .newPassword
-        tf.returnKeyType = .done
-        tf.translatesAutoresizingMaskIntoConstraints = false
-        return tf
-    }()
+    
+    private let confirmPasswordField = GradientTextField.password(placeholder: "Confirm password")
 
     private let registerButton: UIButton = {
         let btn = UIButton(type: .system)
@@ -75,7 +40,7 @@ class RegisterViewController: UIViewController {
         btn.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         btn.backgroundColor = .systemBlue
         btn.tintColor = .white
-        btn.layer.cornerRadius = 10
+        btn.layer.cornerRadius = 16
         btn.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
@@ -101,7 +66,6 @@ class RegisterViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        title = "Register"
         setupLayout()
         registerButton.addTarget(self, action: #selector(didTapRegister), for: .touchUpInside)
         loginPromptButton.addTarget(self, action: #selector(didTapLoginPrompt), for: .touchUpInside)
@@ -132,6 +96,10 @@ class RegisterViewController: UIViewController {
             stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
+            nameField.heightAnchor.constraint(equalToConstant: 50),
+            emailField.heightAnchor.constraint(equalToConstant: 50),
+            passwordField.heightAnchor.constraint(equalToConstant: 50),
+            confirmPasswordField.heightAnchor.constraint(equalToConstant: 50),
             registerButton.heightAnchor.constraint(equalToConstant: 48),
 
             loginPromptButton.topAnchor.constraint(greaterThanOrEqualTo: stack.bottomAnchor, constant: 16),
@@ -167,6 +135,9 @@ class RegisterViewController: UIViewController {
 
         do {
             try AuthManager.shared.register(email: email, password: password)
+            // Save user name to profile
+            ProfileManager.shared.userName = name
+            ProfileManager.shared.userEmail = email
             print("Registered & logged in as \(email)")
             switchToMainInterface()
         } catch {
@@ -185,9 +156,14 @@ class RegisterViewController: UIViewController {
     
     // MARK: - Navigation
     private func switchToMainInterface() {
-        guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
-        let tabBar = MainViewController()
-        sceneDelegate.window?.rootViewController = tabBar
+        // Pass delegate from LoginViewController if available
+        if let loginVC = navigationController?.viewControllers.first as? LoginViewController {
+            loginVC.delegate?.didCompleteLogin()
+        } else {
+            // Fallback: directly access SceneDelegate
+            guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
+            sceneDelegate.startMainApp()
+        }
     }
     
     // MARK: - Helpers

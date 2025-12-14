@@ -7,7 +7,13 @@
 
 import UIKit
 
+protocol LoginViewControllerDelegate: AnyObject {
+    func didCompleteLogin()
+}
+
 class LoginViewController: UIViewController {
+    
+    weak var delegate: LoginViewControllerDelegate?
 
     // MARK: - UI
     private let titleLabel: UILabel = {
@@ -19,29 +25,15 @@ class LoginViewController: UIViewController {
         return label
     }()
 
-    private let emailField: UITextField = {
-        let tf = UITextField()
-        tf.placeholder = "Email"
-        tf.keyboardType = .emailAddress
-        tf.autocapitalizationType = .none
-        tf.autocorrectionType = .no
-        tf.borderStyle = .roundedRect
+    private let emailField: GradientTextField = {
+        let tf = GradientTextField.email(placeholder: "Email")
         tf.textContentType = .username
-        tf.returnKeyType = .next
-        tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
     }()
-
-    private let passwordField: UITextField = {
-        let tf = UITextField()
-        tf.placeholder = "Password"
-        tf.isSecureTextEntry = true
-        tf.autocapitalizationType = .none
-        tf.autocorrectionType = .no
-        tf.borderStyle = .roundedRect
+    
+    private let passwordField: GradientTextField = {
+        let tf = GradientTextField.password(placeholder: "Password")
         tf.textContentType = .password
-        tf.returnKeyType = .done
-        tf.translatesAutoresizingMaskIntoConstraints = false
         return tf
     }()
 
@@ -77,7 +69,6 @@ class LoginViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
-        title = "Login"
         setupLayout()
         loginButton.addTarget(self, action: #selector(didTapLogin), for: .touchUpInside)
         registerPromptButton.addTarget(self, action: #selector(didTapRegisterPrompt), for: .touchUpInside)
@@ -104,6 +95,8 @@ class LoginViewController: UIViewController {
             stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
+            emailField.heightAnchor.constraint(equalToConstant: 50),
+            passwordField.heightAnchor.constraint(equalToConstant: 50),
             loginButton.heightAnchor.constraint(equalToConstant: 48),
 
             registerPromptButton.topAnchor.constraint(greaterThanOrEqualTo: stack.bottomAnchor, constant: 16),
@@ -138,6 +131,7 @@ class LoginViewController: UIViewController {
 
     @objc private func didTapRegisterPrompt() {
         let vc = RegisterViewController()
+        vc.delegate = delegate
         if let nav = navigationController {
             nav.pushViewController(vc, animated: true)
         } else {
@@ -147,10 +141,7 @@ class LoginViewController: UIViewController {
 
     // MARK: - Navigation
     private func switchToMainInterface() {
-        // Switch root to RootTabBarController after login
-        guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
-        let tabBar = MainViewController()
-        sceneDelegate.window?.rootViewController = tabBar
+        delegate?.didCompleteLogin()
     }
 
     // MARK: - Helpers

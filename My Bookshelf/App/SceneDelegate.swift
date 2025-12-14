@@ -16,27 +16,44 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         guard let windowScene = (scene as? UIWindowScene) else { return }
 
         let window = UIWindow(windowScene: windowScene)
-        let appCoordinator = AppCoordinator(window: window)
         self.window = window
-        self.appCoordinator = appCoordinator
         
+        // Apply saved dark mode preference
         if let savedStyle = UserDefaults.standard.string(forKey: "userInterfaceStyle") {
             window.overrideUserInterfaceStyle = savedStyle == "dark" ? .dark : .light
         }
 
-        appCoordinator.start()
-        
-//        if AuthManager.shared.isLoggedIn {
-//            let mainVC = MainViewController()
-//            window.rootViewController = mainVC
-//        } else {
-//            let loginVC = LoginViewController()
-//            let nav = UINavigationController(rootViewController: loginVC)
-//            window.rootViewController = nav
-//        }
-//        
-//        window.makeKeyAndVisible()
+        // Check authentication status
+        if AuthManager.shared.isLoggedIn {
+            // User is logged in, show main app
+            startMainApp()
+        } else {
+            // User is not logged in, show login screen
+            startLoginFlow()
+        }
     }
+    
+    func startMainApp() {
+        let appCoordinator = AppCoordinator(window: window)
+        self.appCoordinator = appCoordinator
+        appCoordinator.start()
+    }
+    
+    func startLoginFlow() {
+        let loginVC = LoginViewController()
+        loginVC.delegate = self
+        let nav = UINavigationController(rootViewController: loginVC)
+        window?.rootViewController = nav
+        window?.makeKeyAndVisible()
+    }
+}
+
+// MARK: - LoginViewControllerDelegate
+extension SceneDelegate: LoginViewControllerDelegate {
+    func didCompleteLogin() {
+        startMainApp()
+    }
+}
 
     func sceneDidDisconnect(_ scene: UIScene) {
         // Called as the scene is being released by the system.
@@ -65,7 +82,4 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         // Use this method to save data, release shared resources, and store enough scene-specific state information
         // to restore the scene back to its current state.
     }
-
-
-}
 
