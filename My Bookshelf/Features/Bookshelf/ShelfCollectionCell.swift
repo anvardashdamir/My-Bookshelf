@@ -28,7 +28,7 @@ final class ShelfCollectionCell: UICollectionViewCell {
     private let iconView: UIImageView = {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
-        iv.tintColor = .systemBlue
+        iv.tintColor = .darkGreen
         iv.image = UIImage(systemName: "books.vertical")
         return iv
     }()

@@ -41,7 +41,7 @@ final class SearchBarView: UIView {
 
     private func setupUI() {
         backgroundColor = .secondarySystemBackground
-        layer.cornerRadius = 10
+        layer.cornerRadius = 16
         layer.masksToBounds = true
 
         let stack = UIStackView(arrangedSubviews: [iconView, textField])
@@ -60,8 +60,8 @@ final class SearchBarView: UIView {
             stack.leadingAnchor.constraint(equalTo: leadingAnchor),
             stack.trailingAnchor.constraint(equalTo: trailingAnchor),
             stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-            iconView.widthAnchor.constraint(equalToConstant: 20),
-            iconView.heightAnchor.constraint(equalToConstant: 20)
+            iconView.widthAnchor.constraint(equalToConstant: 22),
+            iconView.heightAnchor.constraint(equalToConstant: 22)
         ])
     }
 }

@@ -16,7 +16,7 @@ final class FavouriteBooksViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Favourites"
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .appBackground
         setupCollectionView()
         loadData()
 
@@ -35,7 +35,7 @@ final class FavouriteBooksViewController: UIViewController {
         layout.minimumLineSpacing = 16
 
         collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.backgroundColor = .systemBackground
+        collectionView.backgroundColor = .appBackground
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.register(FavouriteBookCell.self, forCellWithReuseIdentifier: FavouriteBookCell.reuseId)
         collectionView.dataSource = self

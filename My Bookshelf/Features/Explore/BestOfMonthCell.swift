@@ -28,7 +28,7 @@ final class BestOfMonthCell: UICollectionViewCell {
     private func setupUI() {
         contentView.layer.cornerRadius = 16
         contentView.layer.masksToBounds = true
-        contentView.backgroundColor = .secondarySystemBackground
+        contentView.backgroundColor = UIColor(red: 195/255, green: 172/255, blue: 131/255, alpha: 1) // explore screen "best of the month" view color
 
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true

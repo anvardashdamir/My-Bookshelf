@@ -7,6 +7,7 @@
 
 import UIKit
 
+// change name of MainViewController. TabBarController shouldn't be ViewController
 class MainViewController: UITabBarController {
     
     override func viewDidLoad() {
@@ -14,10 +15,29 @@ class MainViewController: UITabBarController {
         setupAppearance()
     }
     
-    private func setupAppearance() {
-        tabBar.tintColor = .systemBlue
-        tabBar.unselectedItemTintColor = .secondaryLabel
-        tabBar.isTranslucent = false
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        tabBar.backgroundColor = .appBackground
     }
     
+    private func setupAppearance() {
+        let appearance = UITabBarAppearance()
+        appearance.configureWithOpaqueBackground()
+        appearance.backgroundColor = .appBackground
+
+        appearance.stackedLayoutAppearance.selected.iconColor = .tabSelectedGreen
+        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [
+            .foregroundColor: UIColor.tabSelectedGreen
+        ]
+
+        appearance.stackedLayoutAppearance.normal.iconColor = .tabUnselectedDarkGreen
+        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [
+            .foregroundColor: UIColor.tabUnselectedDarkGreen
+        ]
+
+        tabBar.standardAppearance = appearance
+        tabBar.scrollEdgeAppearance = appearance
+        tabBar.isTranslucent = false
+        tabBar.backgroundColor = .appBackground
+    }
 }

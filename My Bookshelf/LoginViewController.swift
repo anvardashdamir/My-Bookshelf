@@ -16,9 +16,11 @@ class LoginViewController: UIViewController {
     weak var delegate: LoginViewControllerDelegate?
 
     // MARK: - UI
+    private let logoImageView = LogoImageView()
+    
     private let titleLabel: UILabel = {
         let label = UILabel()
-        label.text = "Welcome Back"
+        label.text = "Welcome to Bookshelf"
         label.font = .systemFont(ofSize: 28, weight: .bold)
         label.textAlignment = .center
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -26,33 +28,24 @@ class LoginViewController: UIViewController {
     }()
 
     private let emailField: GradientTextField = {
-        let tf = GradientTextField.email(placeholder: "Email")
+        let tf = GradientTextField.email(placeholder: "email")
         tf.textContentType = .username
         return tf
     }()
     
     private let passwordField: GradientTextField = {
-        let tf = GradientTextField.password(placeholder: "Password")
+        let tf = GradientTextField.password(placeholder: "password")
         tf.textContentType = .password
         return tf
     }()
 
-    private let loginButton: UIButton = {
-        let btn = UIButton(type: .system)
-        btn.setTitle("Log In", for: .normal)
-        btn.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        btn.backgroundColor = .systemBlue
-        btn.tintColor = .white
-        btn.layer.cornerRadius = 10
-        btn.contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        return btn
-    }()
+    private let loginButton = GradientButton.primary(title: "login", height: 52)
 
     private let registerPromptButton: UIButton = {
         let btn = UIButton(type: .system)
         btn.setTitle("New here? Create an account", for: .normal)
         btn.titleLabel?.font = .systemFont(ofSize: 14)
+        btn.setTitleColor(.darkGreen, for: .normal)
         btn.translatesAutoresizingMaskIntoConstraints = false
         return btn
     }()
@@ -68,7 +61,7 @@ class LoginViewController: UIViewController {
     // MARK: - Lifecycle
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .appBackground
         setupLayout()
         loginButton.addTarget(self, action: #selector(didTapLogin), for: .touchUpInside)
         registerPromptButton.addTarget(self, action: #selector(didTapRegisterPrompt), for: .touchUpInside)
@@ -78,6 +71,7 @@ class LoginViewController: UIViewController {
 
     // MARK: - Layout
     private func setupLayout() {
+        view.addSubview(logoImageView)
         view.addSubview(titleLabel)
         view.addSubview(stack)
         view.addSubview(registerPromptButton)
@@ -87,7 +81,10 @@ class LoginViewController: UIViewController {
         stack.addArrangedSubview(loginButton)
 
         NSLayoutConstraint.activate([
-            titleLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 24),
+            logoImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            logoImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            
+            titleLabel.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 24),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
@@ -97,7 +94,6 @@ class LoginViewController: UIViewController {
 
             emailField.heightAnchor.constraint(equalToConstant: 50),
             passwordField.heightAnchor.constraint(equalToConstant: 50),
-            loginButton.heightAnchor.constraint(equalToConstant: 48),
 
             registerPromptButton.topAnchor.constraint(greaterThanOrEqualTo: stack.bottomAnchor, constant: 16),
             registerPromptButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),

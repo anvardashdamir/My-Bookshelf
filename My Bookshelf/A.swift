@@ -73,10 +73,7 @@ BookApp/
  │       └─ CommonCells/
  │           └─ BasicBookCell.swift
  │
- └─ Tests/
-     ├─ NetworkingTests/
-     ├─ ModelDecodingTests/
-     └─ PersistenceTests/
+
 
 
 

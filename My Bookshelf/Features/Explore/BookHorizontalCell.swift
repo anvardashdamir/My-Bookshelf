@@ -28,7 +28,7 @@ final class BookHorizontalCell: UICollectionViewCell {
     private func setupUI() {
         contentView.layer.cornerRadius = 12
         contentView.layer.masksToBounds = true
-        contentView.backgroundColor = .secondarySystemBackground
+        contentView.backgroundColor = .darkGreen // explore screen book cells
 
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true

@@ -139,22 +139,13 @@ final class SettingsViewController: UIViewController {
         return view
     }()
     
-    private let logoutButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Log Out", for: .normal)
-        button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .systemRed
-        button.layer.cornerRadius = 16
-        button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        return button
-    }()
+    private let logoutButton = GradientButton.destructive(title: "logout", height: 48)
     
     // MARK: - Lifecycle -
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Settings"
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .appBackground
 
         setupHierarchy()
         setupLayout()
@@ -227,7 +218,6 @@ final class SettingsViewController: UIViewController {
             logoutButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             logoutButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             logoutButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-            logoutButton.heightAnchor.constraint(equalToConstant: 56),
 
             profileCard.heightAnchor.constraint(greaterThanOrEqualToConstant: 100),
 

@@ -16,7 +16,7 @@ final class ExploreViewController: UIViewController {
     private lazy var collectionView: UICollectionView = {
         let layout = createLayout()
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        cv.backgroundColor = .systemBackground
+        cv.backgroundColor = .appBackground
         cv.dataSource = self
         cv.delegate = self
         cv.alwaysBounceVertical = true
@@ -35,7 +35,7 @@ final class ExploreViewController: UIViewController {
 
     private func setupUI() {
         title = "Explore"
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .appBackground
 
         searchBarView.delegate = self
 
@@ -49,7 +49,7 @@ final class ExploreViewController: UIViewController {
             searchBarView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             searchBarView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 16),
             searchBarView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
-            searchBarView.heightAnchor.constraint(equalToConstant: 44),
+            searchBarView.heightAnchor.constraint(equalToConstant: 48),
 
             collectionView.topAnchor.constraint(equalTo: searchBarView.bottomAnchor, constant: 12),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),

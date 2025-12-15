@@ -18,7 +18,7 @@ final class ShelfViewController: UIViewController {
         layout.minimumInteritemSpacing = 12
 
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        cv.backgroundColor = .systemBackground
+        cv.backgroundColor = .appBackground
         cv.alwaysBounceVertical = true
         cv.register(ShelfCollectionCell.self,
                     forCellWithReuseIdentifier: ShelfCollectionCell.reuseIdentifier)
@@ -47,7 +47,7 @@ final class ShelfViewController: UIViewController {
 
     private func setupUI() {
         title = "Bookshelf"
-        view.backgroundColor = .systemBackground
+        view.backgroundColor = .appBackground
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .add,
@@ -141,8 +141,6 @@ extension ShelfViewController: UICollectionViewDelegate {
         let booksVC = ShelfBooksViewController(shelf: shelf)
         navigationController?.pushViewController(booksVC, animated: true)
     }
-
-    // Optional: swipe-to-delete support for collections (iOS 13+)
 
     func collectionView(
         _ collectionView: UICollectionView,

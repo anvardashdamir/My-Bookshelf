@@ -28,10 +28,9 @@ final class ShelfViewModel {
 
     // In a real app this would talk to a repository / Core Data
     init() {
-        // TEMP: starter example shelves so UI doesn’t look empty
         collections = [
-            ShelfCollection(name: "Currently Reading", bookCount: 2),
-            ShelfCollection(name: "Want to Read", bookCount: 5),
+            ShelfCollection(name: "Reading", bookCount: 2),
+            ShelfCollection(name: "Want to", bookCount: 5),
             ShelfCollection(name: "Finished", bookCount: 12)
         ]
     }

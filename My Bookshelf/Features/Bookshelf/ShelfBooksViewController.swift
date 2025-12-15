@@ -21,7 +21,6 @@ final class ShelfBooksViewController: UIViewController {
     }()
 
     // MARK: - Init
-
     init(shelf: ShelfCollection) {
         self.viewModel = ShelfBooksViewModel(shelf: shelf)
         super.init(nibName: nil, bundle: nil)
@@ -35,7 +34,7 @@ final class ShelfBooksViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor.primary
+        view.backgroundColor = .appBackground
         title = viewModel.shelf.name
         setupUI()
     }
@@ -44,7 +43,7 @@ final class ShelfBooksViewController: UIViewController {
         view.addSubview(infoLabel)
         infoLabel.translatesAutoresizingMaskIntoConstraints = false
 
-        infoLabel.text = "No books in this collection yet.\n\nLater, you'll be able to add books from Explore."
+        infoLabel.text = "No books in this collection yet."
 
         NSLayoutConstraint.activate([
             infoLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),

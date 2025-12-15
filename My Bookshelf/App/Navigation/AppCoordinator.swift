@@ -20,7 +20,6 @@ final class AppCoordinator: Coordinator {
     func start() {
         let tabBarController = MainViewController()
 
-        // Create root view controllers for each tab
         let shelfNav = UINavigationController(rootViewController: ShelfViewController())
         let exploreNav = UINavigationController(rootViewController: ExploreViewController())
         let listsNav = UINavigationController(rootViewController: FavouriteBooksViewController())
