@@ -38,7 +38,7 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         let homeNav = UINavigationController(rootViewController: HomeViewController())
         let exploreNav = UINavigationController(rootViewController: ExploreViewController())
         let listsNav = UINavigationController(rootViewController: ListsViewController())
-        let settingsNav = UINavigationController(rootViewController: SettingsViewController())
+        let settingsNav = UINavigationController(rootViewController: ProfileViewController())
 
         homeNav.tabBarItem = UITabBarItem(
             title: "Home",

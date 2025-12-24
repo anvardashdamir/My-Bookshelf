@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 final class ProfileViewController: UIViewController {
     
@@ -159,18 +160,6 @@ final class ProfileViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadProfileData()
-        
-        // Reload from Firebase
-        Task {
-            do {
-                try await ProfileManager.shared.loadProfile()
-                await MainActor.run {
-                    self.loadProfileData()
-                }
-            } catch {
-                print("Error loading profile: \(error.localizedDescription)")
-            }
-        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -440,22 +429,12 @@ final class ProfileViewController: UIViewController {
             let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             
-            Task {
-                do {
-                    try await ProfileManager.shared.updateProfile(
-                        name: name.isEmpty ? nil : name,
-                        email: email.isEmpty ? nil : email,
-                        photo: nil
-                    )
-                    await MainActor.run {
-                        self?.loadProfileData()
-                    }
-                } catch {
-                    await MainActor.run {
-                        self?.showAlert(message: "Failed to update profile: \(error.localizedDescription)")
-                    }
-                }
-            }
+            ProfileManager.shared.updateProfile(
+                name: name.isEmpty ? nil : name,
+                email: email.isEmpty ? nil : email,
+                photo: nil
+            )
+            self?.loadProfileData()
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -511,21 +490,21 @@ extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationCo
         // Update UI immediately
         profileImageView.image = image
         
-        // Upload to Firebase
+        // Save profile photo locally
+        ProfileManager.shared.updateProfile(name: nil, email: nil, photo: image)
+        loadProfileData()
+        
+        // Optional: Upload to Firebase if authenticated
         Task {
             do {
-                // Check if user is authenticated
-                guard let userId = FirebaseAuthService.shared.currentUserId else {
-                    await MainActor.run {
-                        self.showAlert(message: "You must be logged in to upload photos.")
-                    }
+                // Check if user is authenticated with Firebase
+                guard let userId = Auth.auth().currentUser?.uid else {
+                    // Not using Firebase Auth, just using local storage
                     return
                 }
                 
-                try await ProfileManager.shared.updateProfile(name: nil, email: nil, photo: image)
-                await MainActor.run {
-                    self.loadProfileData()
-                }
+                // If you want to upload to Firebase Storage in the future, add that here
+                // For now, we're using local storage only
             } catch {
                 // Log detailed error for debugging
                 print("❌ Profile photo upload error:")

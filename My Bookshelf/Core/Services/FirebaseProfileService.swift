@@ -9,6 +9,7 @@ import Foundation
 import UIKit
 import FirebaseFirestore
 import FirebaseStorage
+import FirebaseAuth
 
 final class FirebaseProfileService {
     static let shared = FirebaseProfileService()
@@ -52,7 +53,7 @@ final class FirebaseProfileService {
         }
         
         // Verify user is authenticated
-        guard let currentUserId = FirebaseAuthService.shared.currentUserId else {
+        guard let currentUserId = Auth.auth().currentUser?.uid else {
             throw FirebaseProfileError.uploadFailed(underlyingError: NSError(
                 domain: "FirebaseProfileService",
                 code: 401,

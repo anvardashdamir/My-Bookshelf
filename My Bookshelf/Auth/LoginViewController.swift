@@ -116,12 +116,18 @@ class LoginViewController: UIViewController {
             return
         }
 
-        do {
-            try AuthManager.shared.login(email: email, password: password)
-            print("Successful login!")
-            switchToMainInterface()
-        } catch {
-            showAlert(message: error.localizedDescription)
+        Task {
+            do {
+                try await AuthManager.shared.login(email: email, password: password)
+                print("✅ Successful login!")
+                await MainActor.run {
+                    self.switchToMainInterface()
+                }
+            } catch {
+                await MainActor.run {
+                    self.showAlert(message: error.localizedDescription)
+                }
+            }
         }
     }
 

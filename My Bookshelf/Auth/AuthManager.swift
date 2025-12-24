@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import FirebaseAuth
 
 final class AuthManager {
     static let shared = AuthManager()
@@ -21,48 +22,79 @@ final class AuthManager {
     }
     
     var isLoggedIn: Bool {
-        currentUserEmail != nil
+        Auth.auth().currentUser != nil || currentUserEmail != nil
     }
     
-    func register(email: String, password: String) throws {
-        var users = loadUsers()
+    func register(email: String, password: String) async throws {
         let cleanedEmail = email.lowercased()
         
-        guard users[cleanedEmail] == nil else {
-            throw AuthError.emailAlreadyInUse
+        // Create Firebase Auth user
+        do {
+            let authResult = try await Auth.auth().createUser(withEmail: cleanedEmail, password: password)
+            print("✅ Firebase Auth user created: \(authResult.user.uid)")
+            
+            // Also save to local Keychain for backward compatibility
+            var users = loadUsers()
+            users[cleanedEmail] = password
+            saveUsers(users)
+            _ = KeychainHelper.shared.save(key: currentUserKey, value: cleanedEmail)
+        } catch {
+            // Check if email already exists in Firebase
+            if let nsError = error as NSError?,
+               nsError.domain == "FIRAuthErrorDomain",
+               nsError.code == 17007 { // Email already in use
+                throw AuthError.emailAlreadyInUse
+            }
+            throw error
         }
-        
-        users[cleanedEmail] = password
-        saveUsers(users)
-        _ = KeychainHelper.shared.save(key: currentUserKey, value: cleanedEmail)
     }
     
-    func login(email: String, password: String) throws {
-        let users = loadUsers()
+    func login(email: String, password: String) async throws {
         let cleanedEmail = email.lowercased()
         
-        guard let storedPassword = users[cleanedEmail] else {
-            throw AuthError.userNotFound
+        // Sign in with Firebase Auth
+        do {
+            let authResult = try await Auth.auth().signIn(withEmail: cleanedEmail, password: password)
+            print("✅ Firebase Auth sign in successful: \(authResult.user.uid)")
+            
+            // Also save to local Keychain for backward compatibility
+            _ = KeychainHelper.shared.save(key: currentUserKey, value: cleanedEmail)
+        } catch {
+            // Check for specific Firebase Auth errors
+            if let nsError = error as NSError?,
+               nsError.domain == "FIRAuthErrorDomain" {
+                switch nsError.code {
+                case 17011: // User not found
+                    throw AuthError.userNotFound
+                case 17009, 17010: // Wrong password
+                    throw AuthError.invalidPassword
+                default:
+                    throw error
+                }
+            }
+            throw error
         }
-        
-        guard storedPassword == password else {
-            throw AuthError.invalidPassword
-        }
-        
-        _ = KeychainHelper.shared.save(key: currentUserKey, value: cleanedEmail)
     }
     
-    func logout() {
+    func logout() throws {
+        try Auth.auth().signOut()
         _ = KeychainHelper.shared.delete(key: currentUserKey)
     }
     
-    func deleteAccount() {
-        guard let email = currentUserEmail else { return }
+    func deleteAccount() async throws {
+        guard let user = Auth.auth().currentUser else {
+            throw NSError(domain: "AuthManager", code: 401, userInfo: [NSLocalizedDescriptionKey: "No user logged in"])
+        }
         
-        // Remove user from registered users
-        var users = loadUsers()
-        users.removeValue(forKey: email.lowercased())
-        saveUsers(users)
+        // Delete Firebase Auth user
+        try await user.delete()
+        
+        // Also clean up local storage
+        if let email = currentUserEmail {
+            var users = loadUsers()
+            users.removeValue(forKey: email.lowercased())
+            saveUsers(users)
+        }
         
         // Clear current user
         _ = KeychainHelper.shared.delete(key: currentUserKey)

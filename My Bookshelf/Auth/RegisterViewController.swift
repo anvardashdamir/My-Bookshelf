@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 class RegisterViewController: UIViewController {
     
@@ -129,15 +130,69 @@ class RegisterViewController: UIViewController {
             return
         }
 
-        do {
-            try AuthManager.shared.register(email: email, password: password)
-            // Save user name to profile
-            ProfileManager.shared.userName = name
-            ProfileManager.shared.userEmail = email
-            print("Registered & logged in as \(email)")
-            switchToMainInterface()
-        } catch {
-            showAlert(message: error.localizedDescription)
+        Task {
+            do {
+                print("🔄 Starting registration for: \(email)")
+                
+                // Register with Firebase Auth
+                try await AuthManager.shared.register(email: email, password: password)
+                
+                // Verify user was created
+                guard let userId = Auth.auth().currentUser?.uid else {
+                    print("❌ ERROR: Firebase Auth user created but currentUser is nil!")
+                    throw NSError(domain: "RegisterViewController", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to get user ID after registration"])
+                }
+                
+                print("✅ Firebase Auth user created successfully!")
+                print("   User ID: \(userId)")
+                print("   Email: \(Auth.auth().currentUser?.email ?? "unknown")")
+                
+                // Save profile data to Firebase
+                let profile = UserProfile(name: name, email: email, photoURL: nil)
+                try await FirebaseProfileService.shared.saveProfile(profile, userId: userId)
+                print("✅ Profile saved to Firestore")
+                
+                // Also save locally for backward compatibility
+                ProfileManager.shared.userName = name
+                ProfileManager.shared.userEmail = email
+                
+                print("✅ Registration complete for: \(email)")
+                
+                await MainActor.run {
+                    self.switchToMainInterface()
+                }
+            } catch {
+                print("❌ Registration error:")
+                print("   Error: \(error)")
+                print("   Description: \(error.localizedDescription)")
+                
+                if let nsError = error as NSError? {
+                    print("   Domain: \(nsError.domain)")
+                    print("   Code: \(nsError.code)")
+                    print("   UserInfo: \(nsError.userInfo)")
+                }
+                
+                await MainActor.run {
+                    var errorMessage = error.localizedDescription
+                    
+                    // Add helpful messages for common errors
+                    if let nsError = error as NSError?,
+                       nsError.domain == "FIRAuthErrorDomain" {
+                        switch nsError.code {
+                        case 17007:
+                            errorMessage = "This email is already registered."
+                        case 17008:
+                            errorMessage = "Invalid email format."
+                        case 17026:
+                            errorMessage = "Password is too weak. Please use a stronger password."
+                        default:
+                            errorMessage = "Registration failed: \(error.localizedDescription)"
+                        }
+                    }
+                    
+                    self.showAlert(message: errorMessage)
+                }
+            }
         }
     }
     
