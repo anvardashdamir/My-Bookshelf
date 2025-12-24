@@ -30,3 +30,4 @@ struct SubjectAuthor: Decodable {
     let key: String?               // "/authors/OL26320A"
     let name: String?
 }
+

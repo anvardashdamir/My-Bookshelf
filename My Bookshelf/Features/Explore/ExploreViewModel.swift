@@ -26,9 +26,9 @@ final class ExploreViewModel {
 
     // MARK: - Public Properties
 
-    var bestOfMonth: [Book] = []
-    var brandNew: [Book] = []
-    var fantasy: [Book] = []
+    var bestOfMonth: [BookResponse] = []
+    var brandNew: [BookResponse] = []
+    var fantasy: [BookResponse] = []
 
     // Callback to notify VC when data changes
     var onDataUpdated: (() -> Void)?
@@ -41,7 +41,7 @@ final class ExploreViewModel {
         fetchFantasy()
     }
 
-    func books(in section: ExploreSectionType) -> [Book] {
+    func books(in section: ExploreSectionType) -> [BookResponse] {
         switch section {
         case .bestOfMonth: return bestOfMonth
         case .brandNew:    return brandNew
@@ -57,7 +57,7 @@ final class ExploreViewModel {
         NetworkManager.shared.fetch(url: url) { [weak self] (result: Result<SearchResponse, AFError>) in
             switch result {
             case .success(let response):
-                self?.bestOfMonth = response.docs.map(Book.init(from:)).prefix(5).map { $0 }
+                self?.bestOfMonth = response.docs.map(BookResponse.init(from:)).prefix(5).map { $0 }
                 self?.onDataUpdated?()
             case .failure(let error):
                 print("Best of month error:", error.localizedDescription)
@@ -72,7 +72,7 @@ final class ExploreViewModel {
         NetworkManager.shared.fetch(url: url) { [weak self] (result: Result<SearchResponse, AFError>) in
             switch result {
             case .success(let response):
-                self?.brandNew = response.docs.map(Book.init(from:)).prefix(15).map { $0 }
+                self?.brandNew = response.docs.map(BookResponse.init(from:)).prefix(15).map { $0 }
                 self?.onDataUpdated?()
             case .failure(let error):
                 print("Brand new error:", error.localizedDescription)
@@ -87,7 +87,7 @@ final class ExploreViewModel {
         NetworkManager.shared.fetch(url: url) { [weak self] (result: Result<SubjectResponse, AFError>) in
             switch result {
             case .success(let response):
-                self?.fantasy = response.works.map(Book.init(from:)).prefix(15).map { $0 }
+                self?.fantasy = response.works.map(BookResponse.init(from:)).prefix(15).map { $0 }
                 self?.onDataUpdated?()
             case .failure(let error):
                 print("Fantasy error:", error.localizedDescription)

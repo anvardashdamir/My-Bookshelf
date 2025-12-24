@@ -73,7 +73,7 @@ final class FavouriteBookCell: UICollectionViewCell {
         authorLabel.text = nil
     }
 
-    func configure(with book: Book) {
+    func configure(with book: BookResponse) {
         titleLabel.text = book.title
         authorLabel.text = book.authorsText
 

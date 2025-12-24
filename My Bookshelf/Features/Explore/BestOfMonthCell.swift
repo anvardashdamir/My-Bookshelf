@@ -72,7 +72,7 @@ final class BestOfMonthCell: UICollectionViewCell {
         subtitleLabel.text = nil
     }
 
-    func configure(with book: Book?) {
+    func configure(with book: BookResponse?) {
         guard let book = book else {
             titleLabel.text = "No book available"
             subtitleLabel.text = nil

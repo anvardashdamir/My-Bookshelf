@@ -17,7 +17,7 @@ final class AuthManager {
     
     // MARK: - Public
     var currentUserEmail: String? {
-        UserDefaults.standard.string(forKey: currentUserKey)
+        KeychainHelper.shared.load(key: currentUserKey)
     }
     
     var isLoggedIn: Bool {
@@ -34,7 +34,7 @@ final class AuthManager {
         
         users[cleanedEmail] = password
         saveUsers(users)
-        UserDefaults.standard.set(cleanedEmail, forKey: currentUserKey)
+        _ = KeychainHelper.shared.save(key: currentUserKey, value: cleanedEmail)
     }
     
     func login(email: String, password: String) throws {
@@ -49,20 +49,32 @@ final class AuthManager {
             throw AuthError.invalidPassword
         }
         
-        UserDefaults.standard.set(cleanedEmail, forKey: currentUserKey)
+        _ = KeychainHelper.shared.save(key: currentUserKey, value: cleanedEmail)
     }
     
     func logout() {
-        UserDefaults.standard.removeObject(forKey: currentUserKey)
+        _ = KeychainHelper.shared.delete(key: currentUserKey)
     }
     
+    func deleteAccount() {
+        guard let email = currentUserEmail else { return }
+        
+        // Remove user from registered users
+        var users = loadUsers()
+        users.removeValue(forKey: email.lowercased())
+        saveUsers(users)
+        
+        // Clear current user
+        _ = KeychainHelper.shared.delete(key: currentUserKey)
+    }
+        
     // MARK: - Private
     private func loadUsers() -> [String: String] {
-        (UserDefaults.standard.dictionary(forKey: usersKey) as? [String: String]) ?? [:]
+        KeychainHelper.shared.loadDictionary(key: usersKey) ?? [:]
     }
     
     private func saveUsers(_ users: [String: String]) {
-        UserDefaults.standard.set(users, forKey: usersKey)
+        _ = KeychainHelper.shared.saveDictionary(key: usersKey, dictionary: users)
     }
 }
 

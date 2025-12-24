@@ -1,5 +1,5 @@
 //
-//  Book.swift
+//  BookResponse.swift
 //  My Bookshelf
 //
 //  Created by Dashdemirli Enver on 20.11.25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-struct Book: Identifiable, Equatable, Hashable {
+struct BookResponse: Identifiable, Equatable, Hashable, Sendable {
     let id: String          // use work key: "/works/OL27448W"
     let title: String
     let authors: [String]
@@ -16,7 +16,7 @@ struct Book: Identifiable, Equatable, Hashable {
 }
 
 // MARK: - Mappers
-extension Book {
+extension BookResponse {
     init(from doc: SearchDoc) {
         self.id = doc.key
         self.title = doc.title ?? "Untitled"
@@ -34,7 +34,7 @@ extension Book {
     }
 }
 
-extension Book {
+extension BookResponse {
     var coverURL: URL? {
         guard let coverId else { return nil }
         // OpenLibrary cover url (m = medium, L = large)
@@ -45,3 +45,4 @@ extension Book {
         authors.joined(separator: ", ")
     }
 }
+

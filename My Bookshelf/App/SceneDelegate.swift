@@ -10,7 +10,6 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
 
     var window: UIWindow?
-    private var appCoordinator: AppCoordinator?
 
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = (scene as? UIWindowScene) else { return }
@@ -34,9 +33,48 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     }
     
     func startMainApp() {
-        let appCoordinator = AppCoordinator(window: window)
-        self.appCoordinator = appCoordinator
-        appCoordinator.start()
+        let tabBarController = AppTabBarViewController()
+
+        let homeNav = UINavigationController(rootViewController: HomeViewController())
+        let exploreNav = UINavigationController(rootViewController: ExploreViewController())
+        let listsNav = UINavigationController(rootViewController: ListsViewController())
+        let settingsNav = UINavigationController(rootViewController: SettingsViewController())
+
+        homeNav.tabBarItem = UITabBarItem(
+            title: "Home",
+            image: UIImage(systemName: "house"),
+            selectedImage: UIImage(systemName: "house.fill")
+        )
+
+        exploreNav.tabBarItem = UITabBarItem(
+            title: "Explore",
+            image: UIImage(systemName: "magnifyingglass"),
+            selectedImage: UIImage(systemName: "magnifyingglass")
+        )
+
+        listsNav.tabBarItem = UITabBarItem(
+            title: "Lists",
+            image: UIImage(systemName: "list.bullet"),
+            selectedImage: UIImage(systemName: "list.bullet")
+        )
+
+        settingsNav.tabBarItem = UITabBarItem(
+            title: "Settings",
+            image: UIImage(systemName: "gearshape"),
+            selectedImage: UIImage(systemName: "gearshape.fill")
+        )
+
+        tabBarController.viewControllers = [
+            homeNav,
+            exploreNav,
+            listsNav,
+            settingsNav
+        ]
+
+        tabBarController.selectedIndex = 0
+
+        window?.rootViewController = tabBarController
+        window?.makeKeyAndVisible()
     }
     
     func startLoginFlow() {

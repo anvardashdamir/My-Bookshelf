@@ -1,5 +1,5 @@
 //
-//  SettingsViewController.swift
+//  ProfileViewController.swift
 //  My Bookshelf
 //
 //  Created by Dashdemirli Enver on 16.11.25.
@@ -7,7 +7,7 @@
 
 import UIKit
 
-final class SettingsViewController: UIViewController {
+final class ProfileViewController: UIViewController {
     
     private var profile: ProfileManager { .shared }
     private let imagePicker = UIImagePickerController()
@@ -139,12 +139,13 @@ final class SettingsViewController: UIViewController {
         return view
     }()
     
-    private let logoutButton = GradientButton.destructive(title: "logout", height: 48)
+    private let deleteAccountButton = GradientButton.destructive(title: "Delete Account", height: 48)
+    private let logoutButton = GradientButton.destructive(title: "Log Out", height: 48)
     
     // MARK: - Lifecycle -
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "Settings"
+        title = "Profile"
         view.backgroundColor = .appBackground
 
         setupHierarchy()
@@ -158,6 +159,18 @@ final class SettingsViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadProfileData()
+        
+        // Reload from Firebase
+        Task {
+            do {
+                try await ProfileManager.shared.loadProfile()
+                await MainActor.run {
+                    self.loadProfileData()
+                }
+            } catch {
+                print("Error loading profile: \(error.localizedDescription)")
+            }
+        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -170,6 +183,7 @@ final class SettingsViewController: UIViewController {
     // MARK: - Setup -
     private func setupHierarchy() {
         view.addSubview(scrollView)
+        view.addSubview(deleteAccountButton)
         view.addSubview(logoutButton)
         scrollView.addSubview(contentStack)
 
@@ -208,12 +222,16 @@ final class SettingsViewController: UIViewController {
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: logoutButton.topAnchor, constant: -20),
+            scrollView.bottomAnchor.constraint(equalTo: deleteAccountButton.topAnchor, constant: -20),
 
             contentStack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 20),
             contentStack.leadingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.leadingAnchor, constant: 20),
             contentStack.trailingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.trailingAnchor, constant: -20),
             contentStack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -20),
+            
+            deleteAccountButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            deleteAccountButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+            deleteAccountButton.bottomAnchor.constraint(equalTo: logoutButton.topAnchor, constant: -12),
             
             logoutButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             logoutButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
@@ -278,6 +296,7 @@ final class SettingsViewController: UIViewController {
 
     private func setupActions() {
         darkModeSwitch.addTarget(self, action: #selector(darkModeSwitchChanged(_:)), for: .valueChanged)
+        deleteAccountButton.addTarget(self, action: #selector(deleteAccountTapped), for: .touchUpInside)
         logoutButton.addTarget(self, action: #selector(logoutTapped), for: .touchUpInside)
         
         // Profile image tap
@@ -328,15 +347,47 @@ final class SettingsViewController: UIViewController {
         showAboutUsAlert()
     }
     
+    @objc private func deleteAccountTapped() {
+        let alert = UIAlertController(
+            title: "Delete Account",
+            message: "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            Task {
+                do {
+                    try await AuthManager.shared.deleteAccount()
+                    await MainActor.run {
+                        // Navigate back to login screen
+                        guard let sceneDelegate = self?.view.window?.windowScene?.delegate as? SceneDelegate else { return }
+                        sceneDelegate.startLoginFlow()
+                    }
+                } catch {
+                    await MainActor.run {
+                        self?.showAlert(message: "Failed to delete account: \(error.localizedDescription)")
+                    }
+                }
+            }
+        })
+        
+        present(alert, animated: true)
+    }
+    
     @objc private func logoutTapped() {
         let alert = UIAlertController(title: "Log Out", message: "Are you sure you want to log out?", preferredStyle: .alert)
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Log Out", style: .destructive) { [weak self] _ in
-            AuthManager.shared.logout()
-            // Navigate back to login screen
-            guard let sceneDelegate = self?.view.window?.windowScene?.delegate as? SceneDelegate else { return }
-            sceneDelegate.startLoginFlow()
+            do {
+                try AuthManager.shared.logout()
+                // Navigate back to login screen
+                guard let sceneDelegate = self?.view.window?.windowScene?.delegate as? SceneDelegate else { return }
+                sceneDelegate.startLoginFlow()
+            } catch {
+                self?.showAlert(message: "Failed to log out: \(error.localizedDescription)")
+            }
         })
         
         present(alert, animated: true)
@@ -389,14 +440,22 @@ final class SettingsViewController: UIViewController {
             let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             
-            if !name.isEmpty {
-                ProfileManager.shared.userName = name
+            Task {
+                do {
+                    try await ProfileManager.shared.updateProfile(
+                        name: name.isEmpty ? nil : name,
+                        email: email.isEmpty ? nil : email,
+                        photo: nil
+                    )
+                    await MainActor.run {
+                        self?.loadProfileData()
+                    }
+                } catch {
+                    await MainActor.run {
+                        self?.showAlert(message: "Failed to update profile: \(error.localizedDescription)")
+                    }
+                }
             }
-            if !email.isEmpty {
-                ProfileManager.shared.userEmail = email
-            }
-            
-            self?.loadProfileData()
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -434,20 +493,79 @@ final class SettingsViewController: UIViewController {
 }
 
 // MARK: - UIImagePickerControllerDelegate
-extension SettingsViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
+extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
+        let selectedImage: UIImage?
         if let editedImage = info[.editedImage] as? UIImage {
-            profile.profilePhoto = editedImage
-            profileImageView.image = editedImage
+            selectedImage = editedImage
         } else if let originalImage = info[.originalImage] as? UIImage {
-            profile.profilePhoto = originalImage
-            profileImageView.image = originalImage
+            selectedImage = originalImage
+        } else {
+            selectedImage = nil
         }
         
         picker.dismiss(animated: true)
+        
+        guard let image = selectedImage else { return }
+        
+        // Update UI immediately
+        profileImageView.image = image
+        
+        // Upload to Firebase
+        Task {
+            do {
+                // Check if user is authenticated
+                guard let userId = FirebaseAuthService.shared.currentUserId else {
+                    await MainActor.run {
+                        self.showAlert(message: "You must be logged in to upload photos.")
+                    }
+                    return
+                }
+                
+                try await ProfileManager.shared.updateProfile(name: nil, email: nil, photo: image)
+                await MainActor.run {
+                    self.loadProfileData()
+                }
+            } catch {
+                // Log detailed error for debugging
+                print("❌ Profile photo upload error:")
+                print("   Error: \(error)")
+                print("   Description: \(error.localizedDescription)")
+                
+                if let nsError = error as NSError? {
+                    print("   Domain: \(nsError.domain)")
+                    print("   Code: \(nsError.code)")
+                    if let userInfo = nsError.userInfo as? [String: Any] {
+                        print("   UserInfo: \(userInfo)")
+                    }
+                }
+                
+                await MainActor.run {
+                    var errorMessage = "Failed to upload photo.\n\n"
+                    
+                    // Provide user-friendly error messages based on error content
+                    let errorDesc = error.localizedDescription.lowercased()
+                    
+                    if errorDesc.contains("no such module") || errorDesc.contains("cannot find") {
+                        errorMessage += "FirebaseStorage is not installed.\n\nPlease add FirebaseStorage to your project:\n1. Open Xcode\n2. Go to Package Dependencies\n3. Add FirebaseStorage from firebase-ios-sdk"
+                    } else if errorDesc.contains("permission") || errorDesc.contains("unauthorized") || errorDesc.contains("403") {
+                        errorMessage += "Permission denied.\n\nPlease check Firebase Storage security rules in Firebase Console:\n1. Go to Storage → Rules\n2. Ensure users can write to their own folder"
+                    } else if errorDesc.contains("unauthenticated") || errorDesc.contains("401") {
+                        errorMessage += "You must be logged in to upload photos."
+                    } else if errorDesc.contains("quota") || errorDesc.contains("storage") {
+                        errorMessage += "Storage quota exceeded or storage not enabled.\n\nPlease check Firebase Console → Storage"
+                    } else {
+                        errorMessage += "Error: \(error.localizedDescription)\n\nCheck the Xcode console for more details."
+                    }
+                    
+                    self.showAlert(message: errorMessage)
+                }
+            }
+        }
     }
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
         picker.dismiss(animated: true)
     }
 }
+

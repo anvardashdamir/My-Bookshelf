@@ -25,3 +25,4 @@ struct SearchDoc: Decodable {
     let subject: [String]?
     let authorKey: [String]?
 }
+

@@ -1,5 +1,5 @@
 //
-//  asd.swift
+//  ListCollectionCell.swift
 //  My Bookshelf
 //
 //  Created by Dashdemirli Enver on 16.11.25.
@@ -7,9 +7,9 @@
 
 import UIKit
 
-final class ShelfCollectionCell: UICollectionViewCell {
+final class ListCollectionCell: UICollectionViewCell {
 
-    static let reuseIdentifier = "ShelfCollectionCell"
+    static let reuseIdentifier = "ListCollectionCell"
 
     private let nameLabel: UILabel = {
         let label = UILabel()
@@ -29,7 +29,6 @@ final class ShelfCollectionCell: UICollectionViewCell {
         let iv = UIImageView()
         iv.contentMode = .scaleAspectFit
         iv.tintColor = .darkGreen
-        iv.image = UIImage(systemName: "books.vertical")
         return iv
     }()
 
@@ -76,15 +75,30 @@ final class ShelfCollectionCell: UICollectionViewCell {
         super.prepareForReuse()
         nameLabel.text = nil
         countLabel.text = nil
+        iconView.image = nil
     }
 
-    func configure(with shelf: ShelfCollection) {
-        nameLabel.text = shelf.name
-        let count = shelf.bookCount
+    func configure(with list: BookList) {
+        nameLabel.text = list.name
+        
+        let count = list.bookCount
         if count == 1 {
             countLabel.text = "1 book"
         } else {
             countLabel.text = "\(count) books"
         }
+        
+        // Set icon based on list type
+        switch list.type {
+        case .currentlyReading:
+            iconView.image = UIImage(systemName: "book.fill")
+        case .finished:
+            iconView.image = UIImage(systemName: "checkmark.circle.fill")
+        case .wantToRead:
+            iconView.image = UIImage(systemName: "bookmark.fill")
+        case .custom:
+            iconView.image = UIImage(systemName: "books.vertical.fill")
+        }
     }
 }
+

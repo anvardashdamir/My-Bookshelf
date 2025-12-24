@@ -224,7 +224,7 @@ extension ExploreViewController: UICollectionViewDelegate {
         guard let sectionType = ExploreSectionType(rawValue: indexPath.section) else { return }
         let books = viewModel.books(in: sectionType)
 
-        let book: Book
+        let book: BookResponse
         if sectionType == .bestOfMonth {
             guard let first = books.first else { return }
             book = first
@@ -234,7 +234,8 @@ extension ExploreViewController: UICollectionViewDelegate {
         }
 
         let detailVC = BookDetailViewController(book: book)
-        navigationController?.pushViewController(detailVC, animated: true)
+        let nav = UINavigationController(rootViewController: detailVC)
+        present(nav, animated: true)
     }
 }
 

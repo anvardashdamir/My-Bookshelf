@@ -10,7 +10,7 @@ import Alamofire
 
 final class BookDetailViewController: UIViewController {
 
-    private let book: Book
+    private let book: BookResponse
     private var workDetail: WorkDetail?
 
     // MARK: - UI
@@ -72,7 +72,7 @@ final class BookDetailViewController: UIViewController {
     }()
 
     // MARK: - Init
-    init(book: Book) {
+    init(book: BookResponse) {
         self.book = book
         super.init(nibName: nil, bundle: nil)
     }
@@ -91,6 +91,12 @@ final class BookDetailViewController: UIViewController {
         configureWithBaseBook()
         fetchWorkDetail()
         
+        navigationItem.leftBarButtonItem = UIBarButtonItem(
+            barButtonSystemItem: .close,
+            target: self,
+            action: #selector(closeTapped)
+        )
+        
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .add,
             target: self,
@@ -98,10 +104,108 @@ final class BookDetailViewController: UIViewController {
         )
     }
     
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // Add book to recently viewed when detail view appears
+        RecentlyViewedStore.shared.add(book)
+    }
+    
+    
+    @objc private func closeTapped() {
+        dismiss(animated: true)
+    }
+    
     // MARK: - Setup
     @objc private func addBookToFavourites() {
-        showAddedToFavoritesAnimation()
-        FavouriteBooksManager.shared.add(book)
+        showListPicker()
+    }
+    
+    private func showListPicker() {
+        let listPickerVC = ListPickerViewController(book: book)
+        listPickerVC.onListSelected = { [weak self] list in
+            guard let self = self else { return }
+            ListsManager.shared.addBook(self.book, toListId: list.id)
+            self.showAddedToListAnimation(listName: list.name)
+        }
+        let nav = UINavigationController(rootViewController: listPickerVC)
+        present(nav, animated: true)
+    }
+    
+    private func showAddedToListAnimation(listName: String) {
+        let overlay = UIView(frame: view.bounds)
+        overlay.backgroundColor = UIColor.black.withAlphaComponent(0.4)
+        overlay.alpha = 0
+        view.addSubview(overlay)
+
+        let container = UIView()
+        container.backgroundColor = .systemBackground
+        container.layer.cornerRadius = 16
+        container.layer.shadowColor = UIColor.black.cgColor
+        container.layer.shadowOpacity = 0.2
+        container.layer.shadowRadius = 10
+        container.layer.shadowOffset = .zero
+        container.translatesAutoresizingMaskIntoConstraints = false
+        overlay.addSubview(container)
+
+        let checkImageView = UIImageView(image: UIImage(systemName: "checkmark.circle.fill"))
+        checkImageView.tintColor = .systemGreen
+        checkImageView.translatesAutoresizingMaskIntoConstraints = false
+
+        let label = UILabel()
+        label.text = "Added to \(listName)"
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .label
+        label.translatesAutoresizingMaskIntoConstraints = false
+
+        container.addSubview(checkImageView)
+        container.addSubview(label)
+
+        NSLayoutConstraint.activate([
+            container.centerXAnchor.constraint(equalTo: overlay.centerXAnchor),
+            container.centerYAnchor.constraint(equalTo: overlay.centerYAnchor),
+            container.widthAnchor.constraint(greaterThanOrEqualToConstant: 220),
+            container.heightAnchor.constraint(equalToConstant: 70),
+
+            checkImageView.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 16),
+            checkImageView.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            checkImageView.widthAnchor.constraint(equalToConstant: 28),
+            checkImageView.heightAnchor.constraint(equalToConstant: 28),
+
+            label.leadingAnchor.constraint(equalTo: checkImageView.trailingAnchor, constant: 12),
+            label.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -16),
+            label.centerYAnchor.constraint(equalTo: container.centerYAnchor)
+        ])
+
+        container.transform = CGAffineTransform(scaleX: 0.6, y: 0.6)
+
+        UIView.animate(withDuration: 0.2,
+                       delay: 0,
+                       usingSpringWithDamping: 0.7,
+                       initialSpringVelocity: 0.8,
+                       options: .curveEaseOut,
+                       animations: {
+            overlay.alpha = 1
+            container.transform = .identity
+        }, completion: { _ in
+            UIView.animate(withDuration: 0.15,
+                           animations: {
+                checkImageView.transform = CGAffineTransform(scaleX: 1.3, y: 1.3)
+            }, completion: { _ in
+                UIView.animate(withDuration: 0.15) {
+                    checkImageView.transform = .identity
+                }
+            })
+
+            UIView.animate(withDuration: 0.3,
+                           delay: 0.9,
+                           options: .curveEaseIn,
+                           animations: {
+                overlay.alpha = 0
+                container.transform = CGAffineTransform(scaleX: 0.7, y: 0.7)
+            }, completion: { _ in
+                overlay.removeFromSuperview()
+            })
+        })
     }
     
     

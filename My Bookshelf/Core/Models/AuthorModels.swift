@@ -17,3 +17,4 @@ struct AuthorDetail: Decodable {
     let bio: OLText?               // same OLText as above
     let photos: [Int]?             // for author image if you want
 }
+

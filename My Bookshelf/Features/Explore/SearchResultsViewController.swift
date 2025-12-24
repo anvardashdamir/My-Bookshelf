@@ -11,7 +11,7 @@ import Alamofire
 final class SearchResultsViewController: UIViewController {
 
     private let query: String
-    private var books: [Book] = []
+    private var books: [BookResponse] = []
 
     private let tableView = UITableView(frame: .zero, style: .plain)
 
@@ -63,7 +63,7 @@ final class SearchResultsViewController: UIViewController {
         NetworkManager.shared.fetch(url: url) { [weak self] (result: Result<SearchResponse, AFError>) in
             switch result {
             case .success(let response):
-                let mapped = response.docs.map(Book.init(from:))
+                let mapped = response.docs.map(BookResponse.init(from:))
                 self?.books = mapped
                 DispatchQueue.main.async {
                     self?.tableView.reloadData()
@@ -106,6 +106,7 @@ extension SearchResultsViewController: UITableViewDelegate {
         tableView.deselectRow(at: indexPath, animated: true)
         let book = books[indexPath.row]
         let detailVC = BookDetailViewController(book: book)
-        navigationController?.pushViewController(detailVC, animated: true)
+        let nav = UINavigationController(rootViewController: detailVC)
+        present(nav, animated: true)
     }
 }

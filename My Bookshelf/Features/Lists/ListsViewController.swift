@@ -1,5 +1,5 @@
 //
-//  ShelfViewController.swift
+//  ListsViewController.swift
 //  My Bookshelf
 //
 //  Created by Dashdemirli Enver on 16.11.25.
@@ -7,9 +7,8 @@
 
 import UIKit
 
-final class ShelfViewController: UIViewController {
-
-    // MARK: - UI
+final class ListsViewController: UIViewController {
+    
     private lazy var collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
@@ -20,39 +19,38 @@ final class ShelfViewController: UIViewController {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .appBackground
         cv.alwaysBounceVertical = true
-        cv.register(ShelfCollectionCell.self,
-                    forCellWithReuseIdentifier: ShelfCollectionCell.reuseIdentifier)
+        cv.register(ListCollectionCell.self,
+                    forCellWithReuseIdentifier: ListCollectionCell.reuseIdentifier)
         cv.dataSource = self
         cv.delegate = self
         return cv
     }()
 
-    // MARK: - Properties
-
-    private let viewModel = ShelfViewModel()
-
-    // MARK: - Lifecycle
+    private var lists: [BookList] = []
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        loadLists()
+        
+        ListsManager.shared.onListsDidChange = { [weak self] in
+            self?.loadLists()
+        }
     }
-
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        updateItemSize()
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        loadLists()
     }
-
-    // MARK: - Setup
 
     private func setupUI() {
-        title = "Bookshelf"
+        title = "Lists"
         view.backgroundColor = .appBackground
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(
             barButtonSystemItem: .add,
             target: self,
-            action: #selector(addCollectionTapped)
+            action: #selector(addListTapped)
         )
 
         view.addSubview(collectionView)
@@ -66,6 +64,11 @@ final class ShelfViewController: UIViewController {
         ])
     }
 
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        updateItemSize()
+    }
+
     private func updateItemSize() {
         guard let layout = collectionView.collectionViewLayout as? UICollectionViewFlowLayout else { return }
 
@@ -76,17 +79,20 @@ final class ShelfViewController: UIViewController {
         layout.itemSize = CGSize(width: itemWidth, height: 100)
     }
 
-    // MARK: - Actions
+    private func loadLists() {
+        lists = ListsManager.shared.getAllLists()
+        collectionView.reloadData()
+    }
 
-    @objc private func addCollectionTapped() {
+    @objc private func addListTapped() {
         let alert = UIAlertController(
-            title: "New Collection",
-            message: "Give your collection a name.",
+            title: "New List",
+            message: "Create a custom list for your books.",
             preferredStyle: .alert
         )
 
         alert.addTextField { textField in
-            textField.placeholder = "e.g. Fantasy, To Read, Classics"
+            textField.placeholder = "e.g. Fantasy, Classics, To Read"
             textField.autocapitalizationType = .words
         }
 
@@ -95,8 +101,7 @@ final class ShelfViewController: UIViewController {
         let createAction = UIAlertAction(title: "Create", style: .default) { [weak self] _ in
             guard let self = self else { return }
             if let name = alert.textFields?.first?.text, !name.trimmingCharacters(in: .whitespaces).isEmpty {
-                self.viewModel.addCollection(named: name)
-                self.collectionView.reloadData()
+                ListsManager.shared.createCustomList(name: name)
             }
         }
 
@@ -108,11 +113,10 @@ final class ShelfViewController: UIViewController {
 }
 
 // MARK: - UICollectionViewDataSource
-
-extension ShelfViewController: UICollectionViewDataSource {
+extension ListsViewController: UICollectionViewDataSource {
 
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        viewModel.numberOfCollections()
+        lists.count
     }
 
     func collectionView(
@@ -120,25 +124,24 @@ extension ShelfViewController: UICollectionViewDataSource {
         cellForItemAt indexPath: IndexPath
     ) -> UICollectionViewCell {
         guard let cell = collectionView.dequeueReusableCell(
-            withReuseIdentifier: ShelfCollectionCell.reuseIdentifier,
+            withReuseIdentifier: ListCollectionCell.reuseIdentifier,
             for: indexPath
-        ) as? ShelfCollectionCell else {
+        ) as? ListCollectionCell else {
             return UICollectionViewCell()
         }
 
-        let shelf = viewModel.collection(at: indexPath)
-        cell.configure(with: shelf)
+        let list = lists[indexPath.item]
+        cell.configure(with: list)
         return cell
     }
 }
 
 // MARK: - UICollectionViewDelegate
-
-extension ShelfViewController: UICollectionViewDelegate {
+extension ListsViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
-        let shelf = viewModel.collection(at: indexPath)
-        let booksVC = ShelfBooksViewController(shelf: shelf)
+        let list = lists[indexPath.item]
+        let booksVC = ListBooksViewController(list: list)
         navigationController?.pushViewController(booksVC, animated: true)
     }
 
@@ -147,18 +150,21 @@ extension ShelfViewController: UICollectionViewDelegate {
         contextMenuConfigurationForItemAt indexPath: IndexPath,
         point: CGPoint
     ) -> UIContextMenuConfiguration? {
-        let shelf = viewModel.collection(at: indexPath)
+        let list = lists[indexPath.item]
+        
+        // Don't allow deletion of default lists
+        guard list.type == .custom else { return nil }
 
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
             let delete = UIAction(
-                title: "Delete \"\(shelf.name)\"",
+                title: "Delete \"\(list.name)\"",
                 image: UIImage(systemName: "trash"),
                 attributes: .destructive
             ) { _ in
-                self?.viewModel.deleteCollection(at: indexPath)
-                self?.collectionView.deleteItems(at: [indexPath])
+                ListsManager.shared.deleteList(list.id)
             }
             return UIMenu(children: [delete])
         }
     }
 }
+

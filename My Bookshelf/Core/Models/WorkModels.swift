@@ -36,3 +36,4 @@ struct WorkDetail: Decodable {
     let covers: [Int]?
     let firstPublishDate: String?
 }
+

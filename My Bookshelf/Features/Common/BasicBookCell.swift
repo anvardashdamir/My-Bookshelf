@@ -85,7 +85,7 @@ final class BasicBookCell: UITableViewCell {
         yearLabel.text = nil
     }
 
-    func configure(with book: Book) {
+    func configure(with book: BookResponse) {
         titleLabel.text = book.title
         authorLabel.text = book.authors.first ?? "Unknown author"
         if let year = book.firstPublishYear {
