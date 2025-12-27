@@ -10,7 +10,9 @@ import FirebaseAuth
 
 final class ProfileViewController: UIViewController {
     
-    private var profile: ProfileManager { .shared }
+    // MARK: - Dependencies
+    private let viewModel = ProfileViewModel()
+
     private let imagePicker = UIImagePickerController()
 
     // MARK: - UI -
@@ -31,7 +33,6 @@ final class ProfileViewController: UIViewController {
         return stack
     }()
 
-    // Profile card
     private let profileCard: UIView = {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
@@ -143,7 +144,8 @@ final class ProfileViewController: UIViewController {
     private let deleteAccountButton = GradientButton.destructive(title: "Delete Account", height: 48)
     private let logoutButton = GradientButton.destructive(title: "Log Out", height: 48)
     
-    // MARK: - Lifecycle -
+    // MARK: - Lifecycle
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         title = "Profile"
@@ -153,13 +155,14 @@ final class ProfileViewController: UIViewController {
         setupLayout()
         setupDarkModeInitialState()
         setupActions()
-        loadProfileData()
         setupImagePicker()
+        bindViewModel()
+        viewModel.loadProfile()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        loadProfileData()
+        viewModel.loadProfile()
     }
 
     override func viewDidLayoutSubviews() {
@@ -188,22 +191,41 @@ final class ProfileViewController: UIViewController {
         appearanceCard.addSubview(darkModeLabel)
         appearanceCard.addSubview(darkModeSwitch)
         
-        // Privacy & About Us
         infoCard.addSubview(privacyButton)
         infoCard.addSubview(separatorView)
         infoCard.addSubview(aboutUsButton)
+    }
+    
+    // MARK: - Setup Methods
+    
+    private func bindViewModel() {
+        viewModel.onProfileUpdated = { [weak self] in
+            self?.updateUI()
+        }
+        
+        viewModel.onError = { [weak self] message in
+            self?.showAlert(message: message)
+        }
+        
+        viewModel.onLogoutSuccess = { [weak self] in
+            self?.navigateToLogin()
+        }
+        
+        viewModel.onDeleteAccountSuccess = { [weak self] in
+            self?.navigateToLogin()
+        }
+    }
+    
+    private func updateUI() {
+        nameLabel.text = viewModel.userName
+        emailLabel.text = viewModel.userEmail
+        profileImageView.image = viewModel.profilePhoto
     }
     
     private func setupImagePicker() {
         imagePicker.delegate = self
         imagePicker.allowsEditing = true
         imagePicker.sourceType = .photoLibrary
-    }
-    
-    private func loadProfileData() {
-        nameLabel.text = profile.userName
-        emailLabel.text = profile.userEmail
-        profileImageView.image = profile.profilePhoto
     }
 
     private func setupLayout() {
@@ -253,7 +275,6 @@ final class ProfileViewController: UIViewController {
             darkModeSwitch.centerYAnchor.constraint(equalTo: appearanceCard.centerYAnchor),
             darkModeSwitch.trailingAnchor.constraint(equalTo: appearanceCard.trailingAnchor, constant: -16),
             
-            // Privacy & About Us | 56 * 2 for two rows
             infoCard.heightAnchor.constraint(equalToConstant: 112),
             
             privacyButton.topAnchor.constraint(equalTo: infoCard.topAnchor),
@@ -275,12 +296,7 @@ final class ProfileViewController: UIViewController {
     }
 
     private func setupDarkModeInitialState() {
-        if let savedStyle = UserDefaults.standard.string(forKey: "userInterfaceStyle") {
-            let isDarkMode = savedStyle == "dark"
-            darkModeSwitch.isOn = isDarkMode
-        } else {
-            darkModeSwitch.isOn = traitCollection.userInterfaceStyle == .dark
-        }
+        darkModeSwitch.isOn = viewModel.isDarkModeEnabled
     }
 
     private func setupActions() {
@@ -288,35 +304,18 @@ final class ProfileViewController: UIViewController {
         deleteAccountButton.addTarget(self, action: #selector(deleteAccountTapped), for: .touchUpInside)
         logoutButton.addTarget(self, action: #selector(logoutTapped), for: .touchUpInside)
         
-        // Profile image tap
         let imageTap = UITapGestureRecognizer(target: self, action: #selector(profileImageTapped))
         profileImageView.addGestureRecognizer(imageTap)
         
-        // Edit label tap
         editButton.addTarget(self, action: #selector(editLabelTapped), for: .touchUpInside)
-        
-        // Privacy button
         privacyButton.addTarget(self, action: #selector(privacyTapped), for: .touchUpInside)
-        
-        // About Us button
         aboutUsButton.addTarget(self, action: #selector(aboutUsTapped), for: .touchUpInside)
     }
 
     // MARK: - Actions
+    
     @objc private func darkModeSwitchChanged(_ sender: UISwitch) {
-        let style: UIUserInterfaceStyle = sender.isOn ? .dark : .light
-
-        UserDefaults.standard.set(sender.isOn ? "dark" : "light", forKey: "userInterfaceStyle")
-        
-        if let windowScene = view.window?.windowScene {
-            windowScene.windows.forEach { window in
-                window.overrideUserInterfaceStyle = style
-            }
-        } else if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.windows.forEach { window in
-                window.overrideUserInterfaceStyle = style
-            }
-        }
+        viewModel.updateDarkMode(isEnabled: sender.isOn)
     }
 
 
@@ -345,20 +344,7 @@ final class ProfileViewController: UIViewController {
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-            Task {
-                do {
-                    try await AuthManager.shared.deleteAccount()
-                    await MainActor.run {
-                        // Navigate back to login screen
-                        guard let sceneDelegate = self?.view.window?.windowScene?.delegate as? SceneDelegate else { return }
-                        sceneDelegate.startLoginFlow()
-                    }
-                } catch {
-                    await MainActor.run {
-                        self?.showAlert(message: "Failed to delete account: \(error.localizedDescription)")
-                    }
-                }
-            }
+            self?.viewModel.deleteAccount()
         })
         
         present(alert, animated: true)
@@ -369,17 +355,15 @@ final class ProfileViewController: UIViewController {
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Log Out", style: .destructive) { [weak self] _ in
-            do {
-                try AuthManager.shared.logout()
-                // Navigate back to login screen
-                guard let sceneDelegate = self?.view.window?.windowScene?.delegate as? SceneDelegate else { return }
-                sceneDelegate.startLoginFlow()
-            } catch {
-                self?.showAlert(message: "Failed to log out: \(error.localizedDescription)")
-            }
+            self?.viewModel.logout()
         })
         
         present(alert, animated: true)
+    }
+    
+    private func navigateToLogin() {
+        guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
+        sceneDelegate.startLoginFlow()
     }
     
     // MARK: - Image Picker
@@ -408,18 +392,19 @@ final class ProfileViewController: UIViewController {
     }
     
     // MARK: - Edit Profile
+    
     private func showEditProfileAlert() {
         let alert = UIAlertController(title: "Edit Profile", message: nil, preferredStyle: .alert)
         
         alert.addTextField { [weak self] textField in
             textField.placeholder = "Name"
-            textField.text = ProfileManager.shared.userName
+            textField.text = self?.viewModel.userName
         }
         
         alert.addTextField { [weak self] textField in
             textField.placeholder = "Email"
             textField.keyboardType = .emailAddress
-            textField.text = ProfileManager.shared.userEmail
+            textField.text = self?.viewModel.userEmail
         }
                 
         alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
@@ -429,12 +414,11 @@ final class ProfileViewController: UIViewController {
             let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
             
-            ProfileManager.shared.updateProfile(
+            self?.viewModel.updateProfile(
                 name: name.isEmpty ? nil : name,
                 email: email.isEmpty ? nil : email,
                 photo: nil
             )
-            self?.loadProfileData()
         })
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
@@ -487,60 +471,8 @@ extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationCo
         
         guard let image = selectedImage else { return }
         
-        // Update UI immediately
         profileImageView.image = image
-        
-        // Save profile photo locally
-        ProfileManager.shared.updateProfile(name: nil, email: nil, photo: image)
-        loadProfileData()
-        
-        // Optional: Upload to Firebase if authenticated
-        Task {
-            do {
-                // Check if user is authenticated with Firebase
-                guard let userId = Auth.auth().currentUser?.uid else {
-                    // Not using Firebase Auth, just using local storage
-                    return
-                }
-                
-                // If you want to upload to Firebase Storage in the future, add that here
-                // For now, we're using local storage only
-            } catch {
-                // Log detailed error for debugging
-                print("❌ Profile photo upload error:")
-                print("   Error: \(error)")
-                print("   Description: \(error.localizedDescription)")
-                
-                if let nsError = error as NSError? {
-                    print("   Domain: \(nsError.domain)")
-                    print("   Code: \(nsError.code)")
-                    if let userInfo = nsError.userInfo as? [String: Any] {
-                        print("   UserInfo: \(userInfo)")
-                    }
-                }
-                
-                await MainActor.run {
-                    var errorMessage = "Failed to upload photo.\n\n"
-                    
-                    // Provide user-friendly error messages based on error content
-                    let errorDesc = error.localizedDescription.lowercased()
-                    
-                    if errorDesc.contains("no such module") || errorDesc.contains("cannot find") {
-                        errorMessage += "FirebaseStorage is not installed.\n\nPlease add FirebaseStorage to your project:\n1. Open Xcode\n2. Go to Package Dependencies\n3. Add FirebaseStorage from firebase-ios-sdk"
-                    } else if errorDesc.contains("permission") || errorDesc.contains("unauthorized") || errorDesc.contains("403") {
-                        errorMessage += "Permission denied.\n\nPlease check Firebase Storage security rules in Firebase Console:\n1. Go to Storage → Rules\n2. Ensure users can write to their own folder"
-                    } else if errorDesc.contains("unauthenticated") || errorDesc.contains("401") {
-                        errorMessage += "You must be logged in to upload photos."
-                    } else if errorDesc.contains("quota") || errorDesc.contains("storage") {
-                        errorMessage += "Storage quota exceeded or storage not enabled.\n\nPlease check Firebase Console → Storage"
-                    } else {
-                        errorMessage += "Error: \(error.localizedDescription)\n\nCheck the Xcode console for more details."
-                    }
-                    
-                    self.showAlert(message: errorMessage)
-                }
-            }
-        }
+        viewModel.processSelectedImage(image)
     }
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

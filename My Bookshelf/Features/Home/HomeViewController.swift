@@ -294,12 +294,10 @@ extension HomeViewController: UICollectionViewDelegate {
             present(nav, animated: true)
             
         case .statistics:
-            // Tapping the 2025 Statistics card opens StatsViewController
             let statsVC = StatsViewController()
             navigationController?.pushViewController(statsVC, animated: true)
             
         case .discover:
-            // Tapping a Discover by Subject opens SubjectBooksViewController
             let subjectName = subjects[indexPath.item]
             let subjectVC = SubjectBooksViewController(subjectName: subjectName)
             navigationController?.pushViewController(subjectVC, animated: true)

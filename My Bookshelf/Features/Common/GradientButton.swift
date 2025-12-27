@@ -46,7 +46,6 @@ final class GradientButton: UIButton {
         titleLabel?.font = .systemFont(ofSize: 20, weight: .bold)
         contentEdgeInsets = UIEdgeInsets(top: 12, left: 16, bottom: 12, right: 16)
         
-        // Setup gradient background
         setupGradientBackground()
         updateStyle()
     }

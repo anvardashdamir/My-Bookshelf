@@ -19,8 +19,7 @@ final class ListsViewController: UIViewController {
         let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
         cv.backgroundColor = .appBackground
         cv.alwaysBounceVertical = true
-        cv.register(ListCollectionCell.self,
-                    forCellWithReuseIdentifier: ListCollectionCell.reuseIdentifier)
+        cv.register(ListCollectionCell.self, forCellWithReuseIdentifier: ListCollectionCell.reuseIdentifier)
         cv.dataSource = self
         cv.delegate = self
         return cv
@@ -152,7 +151,6 @@ extension ListsViewController: UICollectionViewDelegate {
     ) -> UIContextMenuConfiguration? {
         let list = lists[indexPath.item]
         
-        // Don't allow deletion of default lists
         guard list.type == .custom else { return nil }
 
         return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in

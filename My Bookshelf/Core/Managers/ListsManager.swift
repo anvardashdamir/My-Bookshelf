@@ -15,7 +15,6 @@ final class ListsManager {
     var onListsDidChange: (() -> Void)?
     
     private init() {
-        // Initialize with default lists
         lists = [
             BookList(name: "Currently Reading", type: .currentlyReading),
             BookList(name: "Finished", type: .finished),
