@@ -63,7 +63,7 @@ final class FirebaseProfileService {
             ))
         }
         
-    
+        
         guard currentUserId == userId else {
             throw FirebaseProfileError.uploadFailed(underlyingError: NSError(
                 domain: "FirebaseProfileService",
@@ -83,24 +83,23 @@ final class FirebaseProfileService {
         print("   User ID: \(userId)")
         print("   Authenticated User ID: \(currentUserId)")
         
-   
+        // Add metadata for better compatibility
         let metadata = StorageMetadata()
         metadata.contentType = "image/jpeg"
-        metadata.cacheControl = "public,max-age=3600" // Cache for 1 hour
+        metadata.cacheControl = "public,max-age=3600"
         
         do {
-     
+            // Upload the data
             let uploadTask = photoRef.putData(imageData, metadata: metadata)
-            _ = try await uploadTask // Wait for upload to finish
-            print("File uploaded, getting download URL...")
+            _ = try await uploadTask
+            print("✅ File uploaded, getting download URL...")
             
-     
+            // Get download URL
             let downloadURL = try await photoRef.downloadURL()
-            print("Profile photo uploaded successfully: \(downloadURL.absoluteString)")
-            return downloadURL.absoluteString // Return URL as String
+            print("✅ Profile photo uploaded successfully: \(downloadURL.absoluteString)")
+            return downloadURL.absoluteString
         } catch {
-      
-            print("   Firebase Storage upload error:")
+            print("❌ Firebase Storage upload error:")
             print("   Error: \(error)")
             print("   Localized: \(error.localizedDescription)")
             print("   Error Type: \(type(of: error))")
@@ -125,67 +124,55 @@ final class FirebaseProfileService {
                 }
             }
             
-            // Re-throw with more context (wrapped in our custom error type)
+            // Re-throw with more context
             throw FirebaseProfileError.uploadFailed(underlyingError: error)
         }
     }
     
-
     func fetchProfilePhoto(urlString: String) async throws -> UIImage? {
-        // Convert String to URL object
         guard let url = URL(string: urlString) else {
-            return nil // Invalid URL
+            return nil
         }
         
-        // Download image data from URL
-        // URLSession.shared.data(from:): Downloads data from URL
-        // Tuple destructuring: (data, _) - we only need data, ignore response
         let (data, _) = try await URLSession.shared.data(from: url)
-        // Convert data to UIImage
         return UIImage(data: data)
     }
     
-  
     func deleteProfilePhoto(userId: String) async throws {
-        // Create reference to the photo file
         let photoRef = storage.reference()
             .child("users")
             .child(userId)
             .child("profile_photo.jpg")
         
-        // Delete the file
         try await photoRef.delete()
     }
 }
 
-
 struct UserProfile: Codable {
     var name: String
     var email: String
-    var photoURL: String? // Optional - can be nil if no photo
+    var photoURL: String?
 }
-
 
 enum FirebaseProfileError: LocalizedError {
     case imageConversionFailed
-    case uploadFailed(underlyingError: Error) // Associated value - stores the original error
+    case uploadFailed(underlyingError: Error)
     
-   
     var errorDescription: String? {
         switch self {
         case .imageConversionFailed:
             return "Failed to convert image to data."
-        case .uploadFailed(let error): // Associated value - extracts the Error
+        case .uploadFailed(let error):
             return "Upload failed: \(error.localizedDescription)"
         }
     }
-  
+    
     var underlyingError: Error? {
         switch self {
         case .uploadFailed(let error):
-            return error // Return the associated error
+            return error
         default:
-            return nil // No underlying error for other cases
+            return nil
         }
     }
 }

@@ -8,186 +8,181 @@
 import UIKit
 import FirebaseAuth
 
-final class ProfileViewController: UIViewController {
+// MARK: - Flow delegate
+protocol ProfileFlowDelegate: AnyObject {
+    func didRequestLogout()
+    func didRequestAccountDeletion()
+    func didRequestEditProfile()
+}
+
+final class ProfileViewController: BaseController {
     
     // MARK: - Dependencies
-    private let viewModel = ProfileViewModel()
-
-    private let imagePicker = UIImagePickerController()
-
-    // MARK: - UI -
-    private let scrollView: UIScrollView = {
+    weak var coordinator: ProfileFlowDelegate?
+    let viewModel = ProfileViewModel()
+    
+    // MARK: - UI
+    let scrollView: UIScrollView = {
         let sv = UIScrollView()
         sv.translatesAutoresizingMaskIntoConstraints = false
         sv.alwaysBounceVertical = true
         return sv
     }()
-
-    private let contentStack: UIStackView = {
+    
+    let contentStack: UIStackView = {
         let stack = UIStackView()
         stack.axis = .vertical
         stack.spacing = 20
-        stack.alignment = .fill
-        stack.distribution = .fill
         stack.translatesAutoresizingMaskIntoConstraints = false
         return stack
     }()
-
-    private let profileCard: UIView = {
+    
+    // Profile card
+    let profileCard: UIView = {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.backgroundColor = .secondarySystemBackground
         v.layer.cornerRadius = 16
-        v.layer.masksToBounds = true
         return v
     }()
-
-    private let profileImageView: UIImageView = {
+    
+    let profileImageView: UIImageView = {
         let iv = UIImageView()
         iv.translatesAutoresizingMaskIntoConstraints = false
         iv.contentMode = .scaleAspectFill
         iv.clipsToBounds = true
+        iv.layer.cornerRadius = 40
         iv.backgroundColor = .systemGray4
-//        iv.layer.cornerRadius = 40
-        iv.layer.masksToBounds = true
         iv.isUserInteractionEnabled = true
         return iv
     }()
-
-    private let nameLabel: UILabel = {
+    
+    let nameLabel: UILabel = {
         let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 20, weight: .semibold)
-        label.textColor = .label
-        return label
-    }()
-
-    private let emailLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 15)
-        label.textColor = .secondaryLabel
+        label.font = .systemFont(ofSize: 18, weight: .semibold)
+        label.textAlignment = .center
         return label
     }()
     
-    private let editButton: UIButton = {
+    let emailLabel: UILabel = {
+        let label = UILabel()
+        label.font = .systemFont(ofSize: 14)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .center
+        return label
+    }()
+    
+    let editButton: UIButton = {
         let b = UIButton(type: .system)
         b.setTitle("Edit profile", for: .normal)
-        b.translatesAutoresizingMaskIntoConstraints = false
         b.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-        b.setTitleColor(.systemBlue, for: .normal)
-        b.isUserInteractionEnabled = true
         return b
     }()
     
-    private let appearanceCard: UIView = {
+    // Appearance
+    let appearanceCard: UIView = {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.backgroundColor = .secondarySystemBackground
         v.layer.cornerRadius = 16
-        v.layer.masksToBounds = true
         return v
     }()
-
-    private let darkModeLabel: UILabel = {
+    
+    let darkModeLabel: UILabel = {
         let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "Interface Regime"
         label.font = .systemFont(ofSize: 16)
-        label.textColor = .label
         return label
     }()
-
-    private let darkModeSwitch: UISwitch = {
-        let toggle = UISwitch()
-        toggle.translatesAutoresizingMaskIntoConstraints = false
-        toggle.onTintColor = .systemBlue
-        return toggle
+    
+    let darkModeSwitch: UISwitch = {
+        let s = UISwitch()
+        s.onTintColor = .systemBlue
+        return s
     }()
-
-    private let infoCard: UIView = {
+    
+    // Info
+    let infoCard: UIView = {
         let v = UIView()
         v.translatesAutoresizingMaskIntoConstraints = false
         v.backgroundColor = .secondarySystemBackground
         v.layer.cornerRadius = 16
-        v.layer.masksToBounds = true
         return v
     }()
     
-    private let privacyButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("Privacy", for: .normal)
-        button.setTitleColor(.label, for: .normal)
-        button.contentHorizontalAlignment = .left
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        return button
+    let privacyButton = UIButton(type: .system)
+    let aboutUsButton = UIButton(type: .system)
+    
+    let separatorView: UIView = {
+        let v = UIView()
+        v.backgroundColor = .separator
+        return v
     }()
     
-    private let aboutUsButton: UIButton = {
-        let button = UIButton(type: .system)
-        button.translatesAutoresizingMaskIntoConstraints = false
-        button.setTitle("About Us", for: .normal)
-        button.setTitleColor(.label, for: .normal)
-        button.contentHorizontalAlignment = .left
-        button.titleLabel?.font = .systemFont(ofSize: 16, weight: .medium)
-        return button
-    }()
+    let deleteAccountButton = GradientButton.destructive(
+        title: "Delete Account",
+        height: 48
+    )
     
-    private let separatorView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .separator
-        return view
-    }()
-    
-    private let deleteAccountButton = GradientButton.destructive(title: "Delete Account", height: 48)
-    private let logoutButton = GradientButton.destructive(title: "Log Out", height: 48)
+    let logoutButton = GradientButton.destructive(
+        title: "Log Out",
+        height: 48
+    )
     
     // MARK: - Lifecycle
-    
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        title = "Profile"
-        view.backgroundColor = .appBackground
-
-        setupHierarchy()
-        setupLayout()
+    override func configureUI() {
+        setupAppearance()
         setupDarkModeInitialState()
+        setupHierarchy()
         setupActions()
-        setupImagePicker()
-        bindViewModel()
-        viewModel.loadProfile()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        viewModel.loadProfile()
+    override func configureConstraints() {
+        setupLayout()
     }
+    
+    override func configureViewModel() {
+        renderProfile()
+    }
+    
+    // MARK: - Rendering
+    private func renderProfile() {
+        nameLabel.text = viewModel.userName
+        emailLabel.text = viewModel.userEmail
+        profileImageView.image = viewModel.profileImage
+    }
+}
 
-    override func viewDidLayoutSubviews() {
-        super.viewDidLayoutSubviews()
-        profileImageView.layoutIfNeeded()
-        profileImageView.layer.cornerRadius = profileImageView.bounds.width / 2
+// MARK: - UI setup
+private extension ProfileViewController {
+    
+    func setupAppearance() {
+        title = "Profile"
+        view.backgroundColor = .systemBackground
+        
+        privacyButton.setTitle("Privacy", for: .normal)
+        privacyButton.contentHorizontalAlignment = .left
+        
+        aboutUsButton.setTitle("About Us", for: .normal)
+        aboutUsButton.contentHorizontalAlignment = .left
     }
     
-    
-    // MARK: - Setup -
-    private func setupHierarchy() {
+    func setupHierarchy() {
         view.addSubview(scrollView)
         view.addSubview(deleteAccountButton)
         view.addSubview(logoutButton)
+        
         scrollView.addSubview(contentStack)
-
+        
         contentStack.addArrangedSubview(profileCard)
         contentStack.addArrangedSubview(appearanceCard)
         contentStack.addArrangedSubview(infoCard)
-
+        
         profileCard.addSubview(profileImageView)
         profileCard.addSubview(nameLabel)
         profileCard.addSubview(emailLabel)
         profileCard.addSubview(editButton)
-
+        
         appearanceCard.addSubview(darkModeLabel)
         appearanceCard.addSubview(darkModeSwitch)
         
@@ -196,49 +191,17 @@ final class ProfileViewController: UIViewController {
         infoCard.addSubview(aboutUsButton)
     }
     
-    // MARK: - Setup Methods
-    
-    private func bindViewModel() {
-        viewModel.onProfileUpdated = { [weak self] in
-            self?.updateUI()
-        }
-        
-        viewModel.onError = { [weak self] message in
-            self?.showAlert(message: message)
-        }
-        
-        viewModel.onLogoutSuccess = { [weak self] in
-            self?.navigateToLogin()
-        }
-        
-        viewModel.onDeleteAccountSuccess = { [weak self] in
-            self?.navigateToLogin()
-        }
-    }
-    
-    private func updateUI() {
-        nameLabel.text = viewModel.userName
-        emailLabel.text = viewModel.userEmail
-        profileImageView.image = viewModel.profilePhoto
-    }
-    
-    private func setupImagePicker() {
-        imagePicker.delegate = self
-        imagePicker.allowsEditing = true
-        imagePicker.sourceType = .photoLibrary
-    }
-
-    private func setupLayout() {
+    func setupLayout() {
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             scrollView.bottomAnchor.constraint(equalTo: deleteAccountButton.topAnchor, constant: -20),
-
-            contentStack.topAnchor.constraint(equalTo: scrollView.contentLayoutGuide.topAnchor, constant: 20),
-            contentStack.leadingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.leadingAnchor, constant: 20),
-            contentStack.trailingAnchor.constraint(equalTo: scrollView.frameLayoutGuide.trailingAnchor, constant: -20),
-            contentStack.bottomAnchor.constraint(equalTo: scrollView.contentLayoutGuide.bottomAnchor, constant: -20),
+            
+            contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
+            contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
+            contentStack.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor, constant: -20),
+            contentStack.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             
             deleteAccountButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             deleteAccountButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
@@ -247,236 +210,15 @@ final class ProfileViewController: UIViewController {
             logoutButton.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             logoutButton.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
             logoutButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
-
-            profileCard.heightAnchor.constraint(greaterThanOrEqualToConstant: 100),
-
-            profileImageView.leadingAnchor.constraint(equalTo: profileCard.leadingAnchor, constant: 16),
-            profileImageView.topAnchor.constraint(equalTo: profileCard.topAnchor, constant: 16),
-            profileImageView.bottomAnchor.constraint(equalTo: profileCard.bottomAnchor, constant: -16),
-            profileImageView.widthAnchor.constraint(equalToConstant: 80),
-            profileImageView.heightAnchor.constraint(equalToConstant: 80),
-
-            nameLabel.topAnchor.constraint(equalTo: profileImageView.topAnchor, constant: 6),
-            nameLabel.leadingAnchor.constraint(equalTo: profileImageView.trailingAnchor, constant: 16),
-            nameLabel.trailingAnchor.constraint(equalTo: profileCard.trailingAnchor, constant: -16),
-
-            emailLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 4),
-            emailLabel.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
-            emailLabel.trailingAnchor.constraint(equalTo: nameLabel.trailingAnchor),
-            
-            editButton.topAnchor.constraint(equalTo: emailLabel.bottomAnchor, constant: 4),
-            editButton.leadingAnchor.constraint(equalTo: nameLabel.leadingAnchor),
-            editButton.bottomAnchor.constraint(lessThanOrEqualTo: profileCard.bottomAnchor, constant: -8),
-
-            appearanceCard.heightAnchor.constraint(equalToConstant: 56),
-            darkModeLabel.centerYAnchor.constraint(equalTo: appearanceCard.centerYAnchor),
-            darkModeLabel.leadingAnchor.constraint(equalTo: appearanceCard.leadingAnchor, constant: 16),
-
-            darkModeSwitch.centerYAnchor.constraint(equalTo: appearanceCard.centerYAnchor),
-            darkModeSwitch.trailingAnchor.constraint(equalTo: appearanceCard.trailingAnchor, constant: -16),
-            
-            infoCard.heightAnchor.constraint(equalToConstant: 112),
-            
-            privacyButton.topAnchor.constraint(equalTo: infoCard.topAnchor),
-            privacyButton.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 16),
-            privacyButton.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
-            privacyButton.heightAnchor.constraint(equalToConstant: 56),
-            
-            separatorView.topAnchor.constraint(equalTo: privacyButton.bottomAnchor),
-            separatorView.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 16),
-            separatorView.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
-            separatorView.heightAnchor.constraint(equalToConstant: 0.5),
-            
-            aboutUsButton.topAnchor.constraint(equalTo: separatorView.bottomAnchor),
-            aboutUsButton.leadingAnchor.constraint(equalTo: infoCard.leadingAnchor, constant: 16),
-            aboutUsButton.trailingAnchor.constraint(equalTo: infoCard.trailingAnchor, constant: -16),
-            aboutUsButton.bottomAnchor.constraint(equalTo: infoCard.bottomAnchor),
-            aboutUsButton.heightAnchor.constraint(equalToConstant: 56)
         ])
     }
-
-    private func setupDarkModeInitialState() {
-        darkModeSwitch.isOn = viewModel.isDarkModeEnabled
-    }
-
-    private func setupActions() {
-        darkModeSwitch.addTarget(self, action: #selector(darkModeSwitchChanged(_:)), for: .valueChanged)
-        deleteAccountButton.addTarget(self, action: #selector(deleteAccountTapped), for: .touchUpInside)
-        logoutButton.addTarget(self, action: #selector(logoutTapped), for: .touchUpInside)
-        
-        let imageTap = UITapGestureRecognizer(target: self, action: #selector(profileImageTapped))
-        profileImageView.addGestureRecognizer(imageTap)
-        
-        editButton.addTarget(self, action: #selector(editLabelTapped), for: .touchUpInside)
-        privacyButton.addTarget(self, action: #selector(privacyTapped), for: .touchUpInside)
-        aboutUsButton.addTarget(self, action: #selector(aboutUsTapped), for: .touchUpInside)
-    }
-
-    // MARK: - Actions
-    
-    @objc private func darkModeSwitchChanged(_ sender: UISwitch) {
-        viewModel.updateDarkMode(isEnabled: sender.isOn)
-    }
-
-
-    @objc private func profileImageTapped() {
-        showImageSourceAlert()
-    }
-    
-    @objc private func editLabelTapped() {
-        showEditProfileAlert()
-    }
-    
-    @objc private func privacyTapped() {
-        showPrivacyAlert()
-    }
-    
-    @objc private func aboutUsTapped() {
-        showAboutUsAlert()
-    }
-    
-    @objc private func deleteAccountTapped() {
-        let alert = UIAlertController(
-            title: "Delete Account",
-            message: "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.",
-            preferredStyle: .alert
-        )
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-            self?.viewModel.deleteAccount()
-        })
-        
-        present(alert, animated: true)
-    }
-    
-    @objc private func logoutTapped() {
-        let alert = UIAlertController(title: "Log Out", message: "Are you sure you want to log out?", preferredStyle: .alert)
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        alert.addAction(UIAlertAction(title: "Log Out", style: .destructive) { [weak self] _ in
-            self?.viewModel.logout()
-        })
-        
-        present(alert, animated: true)
-    }
-    
-    private func navigateToLogin() {
-        guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
-        sceneDelegate.startLoginFlow()
-    }
-    
-    // MARK: - Image Picker
-    private func showImageSourceAlert() {
-        let alert = UIAlertController(title: "Change Profile Photo", message: nil, preferredStyle: .actionSheet)
-        
-        alert.addAction(UIAlertAction(title: "Choose from Library", style: .default) { [weak self] _ in
-            self?.imagePicker.sourceType = .photoLibrary
-            guard let self else { return }
-            self.present(self.imagePicker, animated: true)
-        })
-        
-        alert.addAction(UIAlertAction(title: "Take Photo", style: .default) { [weak self] _ in
-            guard let self else { return }
-            guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
-                self.showAlert(message: "Camera not available")
-                return
-            }
-            self.imagePicker.sourceType = .camera
-            self.present(self.imagePicker, animated: true)
-        })
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-                
-        present(alert, animated: true)
-    }
-    
-    // MARK: - Edit Profile
-    
-    private func showEditProfileAlert() {
-        let alert = UIAlertController(title: "Edit Profile", message: nil, preferredStyle: .alert)
-        
-        alert.addTextField { [weak self] textField in
-            textField.placeholder = "Name"
-            textField.text = self?.viewModel.userName
-        }
-        
-        alert.addTextField { [weak self] textField in
-            textField.placeholder = "Email"
-            textField.keyboardType = .emailAddress
-            textField.text = self?.viewModel.userEmail
-        }
-                
-        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
-            guard let nameField = alert.textFields?[0],
-                  let emailField = alert.textFields?[1] else { return }
-            
-            let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            
-            self?.viewModel.updateProfile(
-                name: name.isEmpty ? nil : name,
-                email: email.isEmpty ? nil : email,
-                photo: nil
-            )
-        })
-        
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-        
-        present(alert, animated: true)
-    }
-    
-    // MARK: - Privacy
-    private func showPrivacyAlert() {
-        let alert = UIAlertController(
-            title: "Privacy",
-            message: "We respect your privacy. Your personal data, including your reading lists and preferences, are stored locally on your device. We do not collect or share your personal information with third parties.\n\nFor more information, please review our Privacy Policy.",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-    
-    // MARK: - About Us
-    private func showAboutUsAlert() {
-        let alert = UIAlertController(
-            title: "About Us",
-            message: "My Bookshelf is a modern app for managing your personal book collection. Discover new books, organize your reading lists, and keep track of your favorite titles.\n\nVersion 1.0",
-            preferredStyle: .alert
-        )
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
-    
-    private func showAlert(message: String) {
-        let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
-        alert.addAction(UIAlertAction(title: "OK", style: .default))
-        present(alert, animated: true)
-    }
 }
 
-// MARK: - UIImagePickerControllerDelegate
-extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
-    func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
-        let selectedImage: UIImage?
-        if let editedImage = info[.editedImage] as? UIImage {
-            selectedImage = editedImage
-        } else if let originalImage = info[.originalImage] as? UIImage {
-            selectedImage = originalImage
-        } else {
-            selectedImage = nil
-        }
-        
-        picker.dismiss(animated: true)
-        
-        guard let image = selectedImage else { return }
-        
-        profileImageView.image = image
-        viewModel.processSelectedImage(image)
-    }
+// MARK: - Actions
+private extension ProfileViewController {
     
-    func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-        picker.dismiss(animated: true)
+    func setupDarkModeInitialState() {
+        let saved = UserDefaults.standard.string(forKey: "userInterfaceStyle")
+        darkModeSwitch.isOn = saved == "dark"
     }
 }
-

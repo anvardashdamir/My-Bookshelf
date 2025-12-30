@@ -7,38 +7,28 @@
 
 import UIKit
 
-class AppTabBarViewController: UITabBarController {
-    
+final class AppTabBarViewController: UITabBarController {
+
     override func viewDidLoad() {
         super.viewDidLoad()
-        setupAppearance()
+        configureTabBar()
     }
     
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        tabBar.backgroundColor = .appBackground
-    }
-    
-    private func setupAppearance() {
+    private func configureTabBar() {
         let appearance = UITabBarAppearance()
         appearance.configureWithOpaqueBackground()
-        
-        appearance.backgroundColor = .appBackground                                   // tab bar background
-        appearance.stackedLayoutAppearance.selected.iconColor = .tabSelectedGreen     // selected tab item icon color
-        appearance.stackedLayoutAppearance.selected.titleTextAttributes = [           // selected tab item title color
-            .foregroundColor: UIColor.tabSelectedGreen
-        ]
+        appearance.backgroundColor = .appBackground
 
-        appearance.stackedLayoutAppearance.normal.iconColor = .tabUnselectedDarkGreen // unselected tab item icon color
-        appearance.stackedLayoutAppearance.normal.titleTextAttributes = [             // unselected tab item title color
-            .foregroundColor: UIColor.tabUnselectedDarkGreen
-        ]
+        let selected = appearance.stackedLayoutAppearance.selected
+        selected.iconColor = .tabSelectedGreen
+        selected.titleTextAttributes = [.foregroundColor: UIColor.tabSelectedGreen]
+
+        let normal = appearance.stackedLayoutAppearance.normal
+        normal.iconColor = .tabUnselectedDarkGreen
+        normal.titleTextAttributes = [.foregroundColor: UIColor.tabUnselectedDarkGreen]
 
         tabBar.standardAppearance = appearance
         tabBar.scrollEdgeAppearance = appearance
-        tabBar.isTranslucent = false                                                  // disable translucency for solid background
-        
-        // Fallback background color
-//        tabBar.backgroundColor = .appBackground
+        tabBar.isTranslucent = false
     }
 }

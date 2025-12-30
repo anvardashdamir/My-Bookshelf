@@ -2,102 +2,71 @@
 //  ProfileViewModel.swift
 //  My Bookshelf
 //
-//  Created by Dashdemirli Enver on 28.11.25.
+//  Created by Dashdemirli Enver on 29.12.25.
 //
 
 import UIKit
-import FirebaseAuth
+import Foundation
+
+struct ProfileViewData {
+    let name: String
+    let email: String
+    let image: UIImage?
+}
+
 
 final class ProfileViewModel {
     
-    // MARK: - Dependencies
+    private let authManager: AuthManager
     
-    private let profileManager = ProfileManager.shared
-    private let authManager = AuthManager.shared
-    
-    // MARK: - Published Properties
-    
+    init(authManager: AuthManager = .shared) {
+           self.authManager = authManager
+       }
+
     var userName: String {
-        profileManager.userName
+        ProfileManager.shared.userName
     }
-    
+
     var userEmail: String {
-        profileManager.userEmail
+        ProfileManager.shared.userEmail
+    }
+
+    var profileImage: UIImage? {
+        ProfileManager.shared.profilePhoto
+    }
+
+    func logout() throws {
+        try AuthManager.shared.logout()
     }
     
-    var profilePhoto: UIImage? {
-        profileManager.profilePhoto
+    func loadProfile() -> ProfileViewData {
+           let email = authManager.currentUserEmail ?? "Unknown"
+
+           return ProfileViewData(
+               name: email.components(separatedBy: "@").first?.capitalized ?? "User",
+               email: email,
+               image: loadProfileImage()
+           )
+       }
+
+    func deleteAccount() async throws {
+        authManager.deleteAccount()
     }
     
-    var isDarkModeEnabled: Bool {
-        if let savedStyle = UserDefaults.standard.string(forKey: "userInterfaceStyle") {
-            return savedStyle == "dark"
-        }
-        return false
-    }
-    
-    // MARK: - Callbacks
-    
-    var onProfileUpdated: (() -> Void)?
-    var onError: ((String) -> Void)?
-    var onLogoutSuccess: (() -> Void)?
-    var onDeleteAccountSuccess: (() -> Void)?
-    
-    // MARK: - Public Methods
-    
-    func loadProfile() {
-        onProfileUpdated?()
-    }
-    
-    func updateProfile(name: String?, email: String?, photo: UIImage?) {
-        profileManager.updateProfile(name: name, email: email, photo: photo)
-        onProfileUpdated?()
-    }
-    
-    func updateDarkMode(isEnabled: Bool) {
-        UserDefaults.standard.set(isEnabled ? "dark" : "light", forKey: "userInterfaceStyle")
-        
-        let style: UIUserInterfaceStyle = isEnabled ? .dark : .light
-        
-        if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
-            windowScene.windows.forEach { window in
-                window.overrideUserInterfaceStyle = style
-            }
-        }
-    }
-    
-    func logout() {
-        do {
-            try authManager.logout()
-            onLogoutSuccess?()
-        } catch {
-            onError?("Failed to log out: \(error.localizedDescription)")
-        }
-    }
-    
-    func deleteAccount() {
-        Task {
-            do {
-                try await authManager.deleteAccount()
-                await MainActor.run {
-                    self.onDeleteAccountSuccess?()
-                }
-            } catch {
-                await MainActor.run {
-                    self.onError?("Failed to delete account: \(error.localizedDescription)")
-                }
-            }
-        }
-    }
-    
-    func processSelectedImage(_ image: UIImage) {
-        updateProfile(name: nil, email: nil, photo: image)
-        
-        Task {
-            guard let userId = Auth.auth().currentUser?.uid else {
-                return
-            }
-        }
+    private func loadProfileImage() -> UIImage? {
+          // Placeholder for now
+          UIImage(systemName: "person.circle.fill")
+      }
+
+    func updateProfile(
+        name: String?,
+        email: String?,
+        photo: UIImage?
+    ) {
+        ProfileManager.shared.updateProfile(
+            name: name,
+            email: email,
+            photo: photo
+        )
     }
 }
-

@@ -6,87 +6,65 @@
 //
 
 import UIKit
-import FirebaseAuth
 
-class RegisterViewController: UIViewController {
-    weak var delegate: LoginViewControllerDelegate?
+final class RegisterViewController: BaseController {
 
-    // MARK: - UI Components
+    weak var delegate: AuthFlowDelegate?
+
+    // MARK: - UI
     private let logoImageView = LogoImageView()
-    
-
-    private let titleLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Create Account"
-        label.font = .systemFont(ofSize: 28, weight: .bold)
-        label.textAlignment = .center
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
+    private let titleLabel = UILabel()
 
     private let nameField = GradientTextField.name(placeholder: "full name")
     private let emailField = GradientTextField.email(placeholder: "email")
-    
-
-    private let passwordField: GradientTextField = {
-        let tf = GradientTextField.password(placeholder: "password")
-        tf.textContentType = .newPassword
-        tf.returnKeyType = .next
-        return tf
-    }()
-    
+    private let passwordField = GradientTextField.password(placeholder: "password")
     private let confirmPasswordField = GradientTextField.password(placeholder: "confirm password")
+
     private let registerButton = GradientButton.primary(title: "sign up", height: 52)
-  
-    private let loginPromptButton: UIButton = {
-        let btn = UIButton(type: .system)
-        btn.setTitle("Already have an account? Log In", for: .normal)
-        btn.titleLabel?.font = .systemFont(ofSize: 14)
-        btn.setTitleColor(.darkGreen, for: .normal)
-        btn.translatesAutoresizingMaskIntoConstraints = false
-        return btn
-    }()
+    private let loginButton = UIButton(type: .system)
+    private let stack = UIStackView()
 
- 
-    private let stack: UIStackView = {
-        let sv = UIStackView()
-        sv.axis = .vertical
-        sv.spacing = 12
-        sv.translatesAutoresizingMaskIntoConstraints = false
-        return sv
-    }()
-
-    // MARK: - Lifecycle Methods
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
+    // MARK: - UI Configuration
+    override func configureUI() {
         view.backgroundColor = .appBackground
-        setupLayout()
+
+        titleLabel.text = "Create Account"
+        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        titleLabel.textAlignment = .center
+
+        stack.axis = .vertical
+        stack.spacing = 12
+
+        passwordField.textContentType = .newPassword
+
+        loginButton.setTitle("Already have an account? Log In", for: .normal)
+        loginButton.titleLabel?.font = .systemFont(ofSize: 14)
+        loginButton.setTitleColor(.darkGreen, for: .normal)
+
+        [nameField, emailField, passwordField, confirmPasswordField].forEach {
+            $0.delegate = self
+        }
+        
+        setupFieldNavigation([nameField, emailField, passwordField, confirmPasswordField])
+
         registerButton.addTarget(self, action: #selector(didTapRegister), for: .touchUpInside)
-        loginPromptButton.addTarget(self, action: #selector(didTapLoginPrompt), for: .touchUpInside)
-        nameField.delegate = self
-        emailField.delegate = self
-        passwordField.delegate = self
-        confirmPasswordField.delegate = self
+        loginButton.addTarget(self, action: #selector(didTapLogin), for: .touchUpInside)
     }
 
-    // MARK: - Layout
-    private func setupLayout() {
-        view.addSubview(logoImageView)
-        view.addSubview(titleLabel)
-        view.addSubview(stack)
-        view.addSubview(loginPromptButton)
+    // MARK: - Constraints
+    override func configureConstraints() {
+        [logoImageView, titleLabel, stack, loginButton].forEach {
+            $0.translatesAutoresizingMaskIntoConstraints = false
+            view.addSubview($0)
+        }
 
-        stack.addArrangedSubview(nameField)
-        stack.addArrangedSubview(emailField)
-        stack.addArrangedSubview(passwordField)
-        stack.addArrangedSubview(confirmPasswordField)
-        stack.addArrangedSubview(registerButton)
+        [nameField, emailField, passwordField, confirmPasswordField, registerButton]
+            .forEach { stack.addArrangedSubview($0) }
 
         NSLayoutConstraint.activate([
             logoImageView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             logoImageView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            
+
             titleLabel.topAnchor.constraint(equalTo: logoImageView.bottomAnchor, constant: 24),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
@@ -95,162 +73,35 @@ class RegisterViewController: UIViewController {
             stack.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
             stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
 
-            nameField.heightAnchor.constraint(equalToConstant: 50),
-            emailField.heightAnchor.constraint(equalToConstant: 50),
-            passwordField.heightAnchor.constraint(equalToConstant: 50),
-            confirmPasswordField.heightAnchor.constraint(equalToConstant: 50),
-
-            loginPromptButton.topAnchor.constraint(greaterThanOrEqualTo: stack.bottomAnchor, constant: 16),
-            loginPromptButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            loginPromptButton.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor, constant: -16)
+            loginButton.topAnchor.constraint(greaterThanOrEqualTo: stack.bottomAnchor, constant: 16),
+            loginButton.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            loginButton.bottomAnchor.constraint(equalTo: view.keyboardLayoutGuide.topAnchor, constant: -16)
         ])
+        
+        [nameField, emailField, passwordField, confirmPasswordField].forEach { $0.setHeight(50) }
     }
 
-    // MARK: - Action Methods
-
-    @objc private func didTapRegister() {
-        view.endEditing(true)
-  
-        let name = nameField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let email = emailField.text?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        let password = passwordField.text ?? ""
-        let confirm = confirmPasswordField.text ?? ""
-
-        guard !name.isEmpty else {
-            showAlert(message: "Please enter your name.")
-            return
-        }
-        guard isValidEmail(email) else {
-            showAlert(message: "Please enter a valid email.")
-            return
-        }
-        guard password.count >= 6 else {
-            showAlert(message: "Password must be at least 6 characters.")
-            return
-        }
-        guard password == confirm else {
-            showAlert(message: "Passwords do not match.")
-            return
-        }
-
-        Task {
-            do {
-         
-                try await AuthManager.shared.register(email: email, password: password)
-     
-                guard let userId = Auth.auth().currentUser?.uid else {
-                    print("ERROR: Firebase Auth user created but currentUser is nil!")
-                    throw NSError(domain: "RegisterViewController", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to get user ID after registration"])
-                }
-                
-                print("Firebase Auth user created successfully!")
-                print("   User ID: \(userId)")
-                print("   Email: \(Auth.auth().currentUser?.email ?? "unknown")")
-                
-         
-                let profile = UserProfile(name: name, email: email, photoURL: nil)
-                try await FirebaseProfileService.shared.saveProfile(profile, userId: userId)
-                print("Profile saved to Firestore")
-                
-                        
-                ProfileManager.shared.userName = name
-                ProfileManager.shared.userEmail = email
-                
-                print("✅ Registration complete for: \(email)")
-           
-                await MainActor.run {
-                    self.switchToMainInterface()
-                }
-            } catch {
-           
-                print("Registration error:")
-                print("Error: \(error)")
-                print("Description: \(error.localizedDescription)")
-     
-                if let nsError = error as NSError? {
-                    print("   Domain: \(nsError.domain)")
-                    print("   Code: \(nsError.code)")
-                    print("   UserInfo: \(nsError.userInfo)")
-                }
-                
-           
-                await MainActor.run {
-                    var errorMessage = error.localizedDescription
-           
-                    if let nsError = error as NSError?,
-                       nsError.domain == "FIRAuthErrorDomain" {
-                        switch nsError.code {
-                        case 17007: // Email already in use
-                            errorMessage = "This email is already registered."
-                        case 17008: // Invalid email
-                            errorMessage = "Invalid email format."
-                        case 17026: // Weak password
-                            errorMessage = "Password is too weak. Please use a stronger password."
-                        default:
-                            errorMessage = "Registration failed: \(error.localizedDescription)"
-                        }
-                    }
-                    
-                    self.showAlert(message: errorMessage)
-                }
-            }
-        }
-    }
-    
-
-    @objc private func didTapLoginPrompt() {
-        if let nav = navigationController, nav.viewControllers.first != self {
-            nav.popViewController(animated: true)
-        } else {
-            dismiss(animated: true, completion: nil)
-        }
-    }
-    
-    // MARK: - Navigation Methods
-    
-
-    private func switchToMainInterface() {
-        if let loginVC = navigationController?.viewControllers.first as? LoginViewController {
-            loginVC.delegate?.didCompleteLogin()
-        } else {
-            guard let sceneDelegate = view.window?.windowScene?.delegate as? SceneDelegate else { return }
-            sceneDelegate.startMainApp()
-        }
-    }
-    
-    // MARK: - Helper Methods
- 
-    private func isValidEmail(_ email: String) -> Bool {
-        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.link.rawValue)
-        let range = NSRange(location: 0, length: email.utf16.count)
-        let matches = detector?.matches(in: email, options: [], range: range) ?? []
-        return matches.count == 1 && matches.first?.url?.scheme == "mailto" && matches.first?.range == range
-    }
-
- 
-    private func showAlert(title: String = "", message: String) {
-        let ac = UIAlertController(title: title.isEmpty ? nil : title,
-                                   message: message,
-                                   preferredStyle: .alert)
-        ac.addAction(UIAlertAction(title: "OK", style: .default))
-        present(ac, animated: true) // Show the alert
+    override func configureViewModel() {
+        // no ViewModel yet
     }
 }
 
 
-extension RegisterViewController: UITextFieldDelegate {
+private extension RegisterViewController {
 
-    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
-        switch textField {
-        case nameField:
-            emailField.becomeFirstResponder() // Move to email field
-        case emailField:
-            passwordField.becomeFirstResponder() // Move to password field
-        case passwordField:
-            confirmPasswordField.becomeFirstResponder() // Move to confirm field
-        default:
-            textField.resignFirstResponder() // Dismiss keyboard
-        }
-        return true // Allow default behavior
+    @objc func didTapRegister() {
+         do {
+             try AuthManager.shared.register(
+                 email: emailField.text ?? "",
+                 password: passwordField.text ?? ""
+             )
+             delegate?.didAuthenticate()
+         } catch {
+             showAlert(message: error.localizedDescription)
+         }
+     }
+    
+    @objc func didTapLogin() {
+        navigationController?.popViewController(animated: true)
     }
 }
