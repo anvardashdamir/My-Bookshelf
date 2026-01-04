@@ -8,17 +8,15 @@
 import UIKit
 
 enum HomeSection: Int, CaseIterable {
-    case discover = 0
-    case recentlyViewed = 1
-    case statistics = 2
+    case bestOfMonth = 0
+    case brandNew = 1
+    case fantasy = 2
 }
 
 final class HomeViewController: UIViewController {
     
     private var collectionView: UICollectionView!
-    
-    private let subjects = ["fantasy", "science_fiction", "romance", "psychology", "business"]
-    private var recentlyViewedBooks: [BookResponse] = []
+    private let viewModel = ExploreViewModel()
     
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -26,13 +24,13 @@ final class HomeViewController: UIViewController {
         view.backgroundColor = .appBackground
         
         setupCollectionView()
-        setupObservers()
-        loadData()
+        bindViewModel()
+        viewModel.loadInitialData()
     }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        loadData()
+        collectionView.reloadData()
     }
     
     private func setupCollectionView() {
@@ -40,16 +38,14 @@ final class HomeViewController: UIViewController {
             guard let self = self else { return nil }
             
             guard let section = HomeSection(rawValue: sectionIndex) else {
-                return self.createDiscoverSection()
+                return self.createBestOfMonthSection()
             }
             
             switch section {
-            case .discover:
-                return self.createDiscoverSection()
-            case .recentlyViewed:
-                return self.createHorizontalScrollSection()
-            case .statistics:
-                return self.createStatisticsSection()
+            case .bestOfMonth:
+                return self.createBestOfMonthSection()
+            case .brandNew, .fantasy:
+                return self.createHorizontalBooksSection()
             }
         }
         
@@ -61,16 +57,12 @@ final class HomeViewController: UIViewController {
         
         // Register cells
         collectionView.register(
-            SubjectCell.self,
-            forCellWithReuseIdentifier: SubjectCell.reuseIdentifier
+            BestOfMonthCell.self,
+            forCellWithReuseIdentifier: BestOfMonthCell.reuseIdentifier
         )
         collectionView.register(
-            StatsCardCell.self,
-            forCellWithReuseIdentifier: StatsCardCell.reuseIdentifier
-        )
-        collectionView.register(
-            RecentlyViewedCell.self,
-            forCellWithReuseIdentifier: RecentlyViewedCell.reuseIdentifier
+            BookHorizontalCell.self,
+            forCellWithReuseIdentifier: BookHorizontalCell.reuseIdentifier
         )
         
         // Register header
@@ -90,109 +82,77 @@ final class HomeViewController: UIViewController {
         ])
     }
     
-    private func createHorizontalScrollSection() -> NSCollectionLayoutSection {
-        let itemSize = NSCollectionLayoutSize(
-            widthDimension: .absolute(100),
-            heightDimension: .absolute(150)
-        )
-        let item = NSCollectionLayoutItem(layoutSize: itemSize)
-        
-        let groupSize = NSCollectionLayoutSize(
-            widthDimension: .absolute(100),
-            heightDimension: .absolute(150)
-        )
-        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-        
-        let section = NSCollectionLayoutSection(group: group)
-        section.orthogonalScrollingBehavior = .continuous
-        section.interGroupSpacing = 12
-        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 20, trailing: 16)
-        
-        let headerSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .estimated(44)
-        )
-        let header = NSCollectionLayoutBoundarySupplementaryItem(
-            layoutSize: headerSize,
-            elementKind: UICollectionView.elementKindSectionHeader,
-            alignment: .top
-        )
-        section.boundarySupplementaryItems = [header]
-        
-        return section
-    }
-    
-    private func createStatisticsSection() -> NSCollectionLayoutSection {
-        let itemSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .absolute(120)
-        )
-        let item = NSCollectionLayoutItem(layoutSize: itemSize)
-        
-        let groupSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .absolute(120)
-        )
-        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-        
-        let section = NSCollectionLayoutSection(group: group)
-        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 20, trailing: 16)
-        
-        let headerSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .estimated(44)
-        )
-        let header = NSCollectionLayoutBoundarySupplementaryItem(
-            layoutSize: headerSize,
-            elementKind: UICollectionView.elementKindSectionHeader,
-            alignment: .top
-        )
-        section.boundarySupplementaryItems = [header]
-        
-        return section
-    }
-    
-    private func createDiscoverSection() -> NSCollectionLayoutSection {
-        let itemSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .absolute(56)
-        )
-        let item = NSCollectionLayoutItem(layoutSize: itemSize)
-        
-        let groupSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .absolute(56)
-        )
-        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-        group.interItemSpacing = .fixed(12)
-        
-        let section = NSCollectionLayoutSection(group: group)
-        section.interGroupSpacing = 12
-        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 20, trailing: 16)
-        
-        let headerSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .estimated(44)
-        )
-        let header = NSCollectionLayoutBoundarySupplementaryItem(
-            layoutSize: headerSize,
-            elementKind: UICollectionView.elementKindSectionHeader,
-            alignment: .top
-        )
-        section.boundarySupplementaryItems = [header]
-        
-        return section
-    }
-    
-    private func setupObservers() {
-        RecentlyViewedStore.shared.onBooksDidChange = { [weak self] in
-            self?.loadData()
+    private func bindViewModel() {
+        viewModel.onDataUpdated = { [weak self] in
+            DispatchQueue.main.async {
+                self?.collectionView.reloadData()
+            }
         }
     }
     
-    private func loadData() {
-        recentlyViewedBooks = RecentlyViewedStore.shared.books
-        collectionView.reloadData()
+    private func createBestOfMonthSection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .fractionalHeight(1.0)
+        )
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        
+        let groupSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(0.92),
+            heightDimension: .absolute(180)
+        )
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .groupPagingCentered
+        section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 0, bottom: 24, trailing: 0)
+        
+        let headerSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .estimated(44)
+        )
+        let header = NSCollectionLayoutBoundarySupplementaryItem(
+            layoutSize: headerSize,
+            elementKind: UICollectionView.elementKindSectionHeader,
+            alignment: .top
+        )
+        header.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16)
+        section.boundarySupplementaryItems = [header]
+        
+        return section
+    }
+    
+    private func createHorizontalBooksSection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .fractionalHeight(1.0)
+        )
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        
+        let groupSize = NSCollectionLayoutSize(
+            widthDimension: .absolute(130),
+            heightDimension: .absolute(210)
+        )
+        let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
+        
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .continuous
+        section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 24, trailing: 16)
+        section.interGroupSpacing = 12
+        
+        let headerSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .estimated(44)
+        )
+        let header = NSCollectionLayoutBoundarySupplementaryItem(
+            layoutSize: headerSize,
+            elementKind: UICollectionView.elementKindSectionHeader,
+            alignment: .top
+        )
+        header.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0)
+        section.boundarySupplementaryItems = [header]
+        
+        return section
     }
 }
 
@@ -205,13 +165,12 @@ extension HomeViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         guard let homeSection = HomeSection(rawValue: section) else { return 0 }
         
+        let books = viewModel.books(in: homeSection)
         switch homeSection {
-        case .discover:
-            return subjects.count
-        case .recentlyViewed:
-            return recentlyViewedBooks.count
-        case .statistics:
+        case .bestOfMonth:
             return 1
+        default:
+            return books.count
         }
     }
     
@@ -220,36 +179,25 @@ extension HomeViewController: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
         
+        let books = viewModel.books(in: section)
+        
         switch section {
-        case .recentlyViewed:
-            guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: RecentlyViewedCell.reuseIdentifier,
+        case .bestOfMonth:
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: BestOfMonthCell.reuseIdentifier,
                 for: indexPath
-            ) as? RecentlyViewedCell else {
-                return UICollectionViewCell()
-            }
-            let book = recentlyViewedBooks[indexPath.item]
-            cell.configure(with: book)
+            ) as! BestOfMonthCell
+            let firstBook = books.first
+            cell.configure(with: firstBook)
             return cell
             
-        case .statistics:
-            guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: StatsCardCell.reuseIdentifier,
+        case .brandNew, .fantasy:
+            let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: BookHorizontalCell.reuseIdentifier,
                 for: indexPath
-            ) as? StatsCardCell else {
-                return UICollectionViewCell()
-            }
-            return cell
-            
-        case .discover:
-            guard let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: SubjectCell.reuseIdentifier,
-                for: indexPath
-            ) as? SubjectCell else {
-                return UICollectionViewCell()
-            }
-            let subject = subjects[indexPath.item]
-            cell.configure(with: subject)
+            ) as! BookHorizontalCell
+            guard indexPath.item < books.count else { return cell }
+            cell.configure(with: books[indexPath.item])
             return cell
         }
     }
@@ -267,12 +215,12 @@ extension HomeViewController: UICollectionViewDataSource {
         
         let title: String
         switch section {
-        case .discover:
-            title = "Discover by Subject"
-        case .recentlyViewed:
-            title = "Recently Viewed"
-        case .statistics:
-            title = "Statistics"
+        case .bestOfMonth:
+            title = "Best of the Month"
+        case .brandNew:
+            title = "Brand New Titles"
+        case .fantasy:
+            title = "Popular in Fantasy"
         }
         
         header.configure(with: title)
@@ -285,23 +233,20 @@ extension HomeViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let section = HomeSection(rawValue: indexPath.section) else { return }
         
-        switch section {
-        case .discover:
-            let subjectName = subjects[indexPath.item]
-            let subjectVC = SubjectBooksViewController(subjectName: subjectName)
-            navigationController?.pushViewController(subjectVC, animated: true)
-
-        case .recentlyViewed:
-            // Tapping a book in Recently Viewed opens BookDetailViewController
-            let book = recentlyViewedBooks[indexPath.item]
-            let detailVC = BookDetailViewController(book: book)
-            let nav = UINavigationController(rootViewController: detailVC)
-            present(nav, animated: true)
-            
-        case .statistics:
-            let statsVC = StatsViewController()
-            navigationController?.pushViewController(statsVC, animated: true)
-            
+        let books = viewModel.books(in: section)
+        
+        let book: BookResponse
+        if section == .bestOfMonth {
+            guard let first = books.first else { return }
+            book = first
+        } else {
+            guard indexPath.item < books.count else { return }
+            book = books[indexPath.item]
         }
+        
+        let detailVC = BookDetailViewController(book: book)
+        let nav = UINavigationController(rootViewController: detailVC)
+        present(nav, animated: true)
     }
 }
+

@@ -71,8 +71,6 @@ final class GradientButton: UIButton {
 
         switch buttonStyle {
         case .primary:
-            // Light: #2F5D50 -> #3F7668
-            // Dark : #6FB1A3 -> #89C6B9 (text darker)
             if isDark {
                 gradientLayer.colors = [
                     UIColor(hex: "6FB1A3").cgColor,
@@ -88,8 +86,6 @@ final class GradientButton: UIButton {
             }
 
         case .destructive:
-            // Light: #D64545 -> #B83A3A
-            // Dark : #FF6B6B -> #E85B5B
             if isDark {
                 gradientLayer.colors = [
                     UIColor(hex: "FF6B6B").cgColor,

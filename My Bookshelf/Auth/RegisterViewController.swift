@@ -40,7 +40,7 @@ final class RegisterViewController: BaseController {
         view.backgroundColor = .appBackground
 
         titleLabel.text = "Create Account"
-        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        titleLabel.font = UIFont(name: "TimesNewRomanPS-BoldMT", size: 28)
         titleLabel.textAlignment = .center
 
         stack.axis = .vertical

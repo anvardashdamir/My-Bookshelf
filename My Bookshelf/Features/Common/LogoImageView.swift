@@ -29,8 +29,8 @@ final class LogoImageView: UIImageView {
         translatesAutoresizingMaskIntoConstraints = false
         
         NSLayoutConstraint.activate([
-            widthAnchor.constraint(equalToConstant: 140),
-            heightAnchor.constraint(equalToConstant: 140)
+            widthAnchor.constraint(equalToConstant: 320),
+            heightAnchor.constraint(equalToConstant: 200)
         ])
     }
 }

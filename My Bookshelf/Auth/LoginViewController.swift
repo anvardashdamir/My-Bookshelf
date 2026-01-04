@@ -46,7 +46,7 @@ final class LoginViewController: BaseController {
         setupFieldNavigation([emailField, passwordField])
 
         titleLabel.text = "Welcome to Bookshelf"
-        titleLabel.font = .systemFont(ofSize: 28, weight: .bold)
+        titleLabel.font = UIFont(name: "TimesNewRomanPS-BoldMT", size: 28)
         titleLabel.textAlignment = .center
 
         registerButton.setTitle("New here? Create an account", for: .normal)

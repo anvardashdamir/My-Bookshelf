@@ -9,15 +9,13 @@ import Foundation
 import Alamofire
 
 enum ExploreSectionType: Int, CaseIterable {
-    case bestOfMonth
-    case brandNew
-    case fantasy
+    case discover = 0
+    case recentlyViewed = 1
 
     var title: String {
         switch self {
-        case .bestOfMonth: return "Best of the Month"
-        case .brandNew:    return "Brand New Titles"
-        case .fantasy:     return "Popular in Fantasy"
+        case .discover: return "Discover by Subject"
+        case .recentlyViewed: return "Recently Viewed"
         }
     }
 }
@@ -41,7 +39,7 @@ final class ExploreViewModel {
         fetchFantasy()
     }
 
-    func books(in section: ExploreSectionType) -> [BookResponse] {
+    func books(in section: HomeSection) -> [BookResponse] {
         switch section {
         case .bestOfMonth: return bestOfMonth
         case .brandNew:    return brandNew
@@ -51,7 +49,6 @@ final class ExploreViewModel {
 
     // MARK: - Networking
     private func fetchBestOfMonth() {
-        // Example: treat "bestseller" search as "best of month" (for demo)
         let url = OpenLibraryAPI.searchBooks("bestseller")
 
         NetworkManager.shared.fetch(url: url) { [weak self] (result: Result<SearchResponse, AFError>) in
@@ -66,7 +63,6 @@ final class ExploreViewModel {
     }
 
     private func fetchBrandNew() {
-        // Example: search for "2023" to approximate newer titles
         let url = OpenLibraryAPI.searchBooks("2023")
 
         NetworkManager.shared.fetch(url: url) { [weak self] (result: Result<SearchResponse, AFError>) in
@@ -81,7 +77,6 @@ final class ExploreViewModel {
     }
 
     private func fetchFantasy() {
-        // Use Subjects API for fantasy
         let url = OpenLibraryAPI.subjectBooks("fantasy", limit: 20)
 
         NetworkManager.shared.fetch(url: url) { [weak self] (result: Result<SubjectResponse, AFError>) in

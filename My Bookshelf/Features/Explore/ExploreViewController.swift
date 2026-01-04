@@ -9,9 +9,10 @@ import UIKit
 
 final class ExploreViewController: UIViewController {
 
-    private let viewModel = ExploreViewModel()
-
     private let searchBarView = SearchBarView()
+    
+    private let subjects = ["fantasy", "science_fiction", "romance", "psychology", "business", "historical_fiction", "horror", "personal_growth", "food", "music", "politics", "poetry"]
+    private var recentlyViewedBooks: [BookResponse] = []
 
     private lazy var collectionView: UICollectionView = {
         let layout = createLayout()
@@ -20,8 +21,8 @@ final class ExploreViewController: UIViewController {
         cv.dataSource = self
         cv.delegate = self
         cv.alwaysBounceVertical = true
-        cv.register(BestOfMonthCell.self, forCellWithReuseIdentifier: BestOfMonthCell.reuseIdentifier)
-        cv.register(BookHorizontalCell.self, forCellWithReuseIdentifier: BookHorizontalCell.reuseIdentifier)
+        cv.register(SubjectCell.self, forCellWithReuseIdentifier: SubjectCell.reuseIdentifier)
+        cv.register(RecentlyViewedCell.self, forCellWithReuseIdentifier: RecentlyViewedCell.reuseIdentifier)
         cv.register(ExploreSectionHeaderView.self, forSupplementaryViewOfKind: UICollectionView.elementKindSectionHeader, withReuseIdentifier: ExploreSectionHeaderView.reuseIdentifier)
         return cv
     }()
@@ -29,8 +30,13 @@ final class ExploreViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        bindViewModel()
-        viewModel.loadInitialData()
+        setupObservers()
+        loadData()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        loadData()
     }
 
     private func setupUI() {
@@ -51,19 +57,22 @@ final class ExploreViewController: UIViewController {
             searchBarView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -16),
             searchBarView.heightAnchor.constraint(equalToConstant: 48),
 
-            collectionView.topAnchor.constraint(equalTo: searchBarView.bottomAnchor, constant: 12),
+            collectionView.topAnchor.constraint(equalTo: searchBarView.bottomAnchor, constant: 16),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
     }
-
-    private func bindViewModel() {
-        viewModel.onDataUpdated = { [weak self] in
-            DispatchQueue.main.async {
-                self?.collectionView.reloadData()
-            }
+    
+    private func setupObservers() {
+        RecentlyViewedStore.shared.onBooksDidChange = { [weak self] in
+            self?.loadData()
         }
+    }
+    
+    private func loadData() {
+        recentlyViewedBooks = RecentlyViewedStore.shared.books
+        collectionView.reloadData()
     }
 
     // MARK: - Layout
@@ -75,73 +84,76 @@ final class ExploreViewController: UIViewController {
             }
 
             switch sectionType {
-            case .bestOfMonth:
-                return self.createBestOfMonthSection()
-            case .brandNew, .fantasy:
-                return self.createHorizontalBooksSection()
+            case .discover:
+                return self.createDiscoverSection()
+            case .recentlyViewed:
+                return self.createHorizontalScrollSection()
             }
         }
     }
-
-    private func createBestOfMonthSection() -> NSCollectionLayoutSection {
+    
+    private func createDiscoverSection() -> NSCollectionLayoutSection {
         let itemSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0),
-            heightDimension: .fractionalHeight(1.0)
+            heightDimension: .absolute(56)
         )
         let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
+        
         let groupSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(0.92),
-            heightDimension: .absolute(180)
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .absolute(56)
         )
         let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
-
+        group.interItemSpacing = .fixed(12)
+        
         let section = NSCollectionLayoutSection(group: group)
-        section.orthogonalScrollingBehavior = .groupPagingCentered
-        section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 0, bottom: 24, trailing: 0)
-
-        let header = createHeader()
-        section.boundarySupplementaryItems = [header]
-
-        return section
-    }
-
-    private func createHorizontalBooksSection() -> NSCollectionLayoutSection {
-        let itemSize = NSCollectionLayoutSize(
-            widthDimension: .fractionalWidth(1.0),
-            heightDimension: .fractionalHeight(1.0)
-        )
-        let item = NSCollectionLayoutItem(layoutSize: itemSize)
-
-        let groupSize = NSCollectionLayoutSize(
-            widthDimension: .absolute(130),
-            heightDimension: .absolute(210)
-        )
-        let group = NSCollectionLayoutGroup.vertical(layoutSize: groupSize, subitems: [item])
-
-        let section = NSCollectionLayoutSection(group: group)
-        section.orthogonalScrollingBehavior = .continuous
-        section.contentInsets = NSDirectionalEdgeInsets(top: 12, leading: 16, bottom: 24, trailing: 16)
         section.interGroupSpacing = 12
-
-        let header = createHeader()
-        section.boundarySupplementaryItems = [header]
-
-        return section
-    }
-
-    private func createHeader() -> NSCollectionLayoutBoundarySupplementaryItem {
+        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 20, trailing: 16)
+        
         let headerSize = NSCollectionLayoutSize(
             widthDimension: .fractionalWidth(1.0),
-            heightDimension: .estimated(30)
+            heightDimension: .estimated(44)
         )
         let header = NSCollectionLayoutBoundarySupplementaryItem(
             layoutSize: headerSize,
             elementKind: UICollectionView.elementKindSectionHeader,
             alignment: .top
         )
-        header.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 4, trailing: 16)
-        return header
+        section.boundarySupplementaryItems = [header]
+        
+        return section
+    }
+    
+    private func createHorizontalScrollSection() -> NSCollectionLayoutSection {
+        let itemSize = NSCollectionLayoutSize(
+            widthDimension: .absolute(100),
+            heightDimension: .absolute(150)
+        )
+        let item = NSCollectionLayoutItem(layoutSize: itemSize)
+        
+        let groupSize = NSCollectionLayoutSize(
+            widthDimension: .absolute(100),
+            heightDimension: .absolute(150)
+        )
+        let group = NSCollectionLayoutGroup.horizontal(layoutSize: groupSize, subitems: [item])
+        
+        let section = NSCollectionLayoutSection(group: group)
+        section.orthogonalScrollingBehavior = .continuous
+        section.interGroupSpacing = 12
+        section.contentInsets = NSDirectionalEdgeInsets(top: 0, leading: 16, bottom: 20, trailing: 16)
+        
+        let headerSize = NSCollectionLayoutSize(
+            widthDimension: .fractionalWidth(1.0),
+            heightDimension: .estimated(44)
+        )
+        let header = NSCollectionLayoutBoundarySupplementaryItem(
+            layoutSize: headerSize,
+            elementKind: UICollectionView.elementKindSectionHeader,
+            alignment: .top
+        )
+        section.boundarySupplementaryItems = [header]
+        
+        return section
     }
 }
 
@@ -156,12 +168,11 @@ extension ExploreViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         guard let sectionType = ExploreSectionType(rawValue: section) else { return 0 }
 
-        let books = viewModel.books(in: sectionType)
         switch sectionType {
-        case .bestOfMonth:
-            return 1 // show only first book as hero
-        default:
-            return books.count
+        case .discover:
+            return subjects.count
+        case .recentlyViewed:
+            return recentlyViewedBooks.count
         }
     }
 
@@ -173,25 +184,27 @@ extension ExploreViewController: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
 
-        let books = viewModel.books(in: sectionType)
-
         switch sectionType {
-        case .bestOfMonth:
-            let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: BestOfMonthCell.reuseIdentifier,
+        case .discover:
+            guard let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: SubjectCell.reuseIdentifier,
                 for: indexPath
-            ) as! BestOfMonthCell
-            let firstBook = books.first
-            cell.configure(with: firstBook)
+            ) as? SubjectCell else {
+                return UICollectionViewCell()
+            }
+            let subject = subjects[indexPath.item]
+            cell.configure(with: subject)
             return cell
-
-        case .brandNew, .fantasy:
-            let cell = collectionView.dequeueReusableCell(
-                withReuseIdentifier: BookHorizontalCell.reuseIdentifier,
+            
+        case .recentlyViewed:
+            guard let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: RecentlyViewedCell.reuseIdentifier,
                 for: indexPath
-            ) as! BookHorizontalCell
-            guard indexPath.item < books.count else { return cell }
-            cell.configure(with: books[indexPath.item])
+            ) as? RecentlyViewedCell else {
+                return UICollectionViewCell()
+            }
+            let book = recentlyViewedBooks[indexPath.item]
+            cell.configure(with: book)
             return cell
         }
     }
@@ -222,20 +235,19 @@ extension ExploreViewController: UICollectionViewDelegate {
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         guard let sectionType = ExploreSectionType(rawValue: indexPath.section) else { return }
-        let books = viewModel.books(in: sectionType)
-
-        let book: BookResponse
-        if sectionType == .bestOfMonth {
-            guard let first = books.first else { return }
-            book = first
-        } else {
-            guard indexPath.item < books.count else { return }
-            book = books[indexPath.item]
+        
+        switch sectionType {
+        case .discover:
+            let subjectName = subjects[indexPath.item]
+            let subjectVC = SubjectBooksViewController(subjectName: subjectName)
+            navigationController?.pushViewController(subjectVC, animated: true)
+            
+        case .recentlyViewed:
+            let book = recentlyViewedBooks[indexPath.item]
+            let detailVC = BookDetailViewController(book: book)
+            let nav = UINavigationController(rootViewController: detailVC)
+            present(nav, animated: true)
         }
-
-        let detailVC = BookDetailViewController(book: book)
-        let nav = UINavigationController(rootViewController: detailVC)
-        present(nav, animated: true)
     }
 }
 
