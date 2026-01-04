@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 final class AuthCoordinator {
 
@@ -27,27 +28,41 @@ final class AuthCoordinator {
 
         authManager.isLoggedIn ? showMainApp() : showLogin()
     }
+    
+    func startLoginFlow() {
+        window.rootViewController = navigationController
+        window.makeKeyAndVisible()
+        showLogin()
+    }
 
     // MARK: - Login flow
     private func showLogin() {
-        let loginVC = LoginViewController()
-        loginVC.delegate = self
-
+        let loginVC = LoginViewController(delegate: self)
         navigationController.setViewControllers([loginVC], animated: false)
     }
 
+    private func showRegister() {
+        let registerVC = RegisterViewController(delegate: self)
+        navigationController.pushViewController(registerVC, animated: true)
+    }
+    
+    
     // MARK: - Main app
     private func showMainApp() {
         let tabBarController = UITabBarController()
+        
+        let profileVC = ProfileViewController()
+        profileVC.authDelegate = self
 
         tabBarController.viewControllers = [
             makeNav(HomeViewController(), title: "Home", icon: "house"),
             makeNav(ExploreViewController(), title: "Explore", icon: "magnifyingglass"),
             makeNav(ListsViewController(), title: "Lists", icon: "list.bullet"),
-            makeNav(ProfileViewController(), title: "Settings", icon: "gearshape")
+            makeNav(profileVC, title: "Profile", icon: "person")
         ]
 
         window.rootViewController = tabBarController
+        window.makeKeyAndVisible()
     }
 
     private func makeNav(
@@ -70,11 +85,22 @@ final class AuthCoordinator {
 extension AuthCoordinator: AuthFlowDelegate {
 
     func didAuthenticate() {
+        print("✅ didAuthenticate called in AuthCoordinator")
+        print("   Current user: \(Auth.auth().currentUser?.email ?? "nil")")
+        print("   User ID: \(Auth.auth().currentUser?.uid ?? "nil")")
         showMainApp()
     }
 
     func didRequestLogout() {
-        authManager.logout()
-        start()   // Reset whole auth flow
+        do {
+            try authManager.logout()
+            print("✅ Logout successful, resetting auth flow")
+        } catch {
+            print("⚠️ Logout error: \(error.localizedDescription)")
+        }
+        
+        // Always reset auth flow after logout (even if logout failed)
+        // This ensures we create a fresh LoginViewController with delegate
+        startLoginFlow()
     }
 }

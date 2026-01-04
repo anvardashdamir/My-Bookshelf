@@ -28,7 +28,7 @@ final class BookHorizontalCell: UICollectionViewCell {
     private func setupUI() {
         contentView.layer.cornerRadius = 12
         contentView.layer.masksToBounds = true
-        contentView.backgroundColor = .darkGreen // explore screen book cells
+        contentView.backgroundColor = .bookCardBorder
 
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
@@ -37,7 +37,7 @@ final class BookHorizontalCell: UICollectionViewCell {
         titleLabel.numberOfLines = 2
 
         authorLabel.font = .systemFont(ofSize: 12)
-        authorLabel.textColor = .secondaryLabel
+        authorLabel.textColor = .bookTitle
         authorLabel.numberOfLines = 1
 
         let textStack = UIStackView(arrangedSubviews: [titleLabel, authorLabel])

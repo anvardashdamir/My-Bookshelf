@@ -26,7 +26,7 @@ final class StatsViewController: UIViewController {
     
     override func viewDidLoad() {
         super.viewDidLoad()
-        title = "2025 Statistics"
+        title = "Statistics"
         view.backgroundColor = .appBackground
         setupUI()
         loadStats()
@@ -69,7 +69,7 @@ final class StatsViewController: UIViewController {
         } else {
             let emptyCard = createStatCard(
                 title: "Top Genres",
-                value: "No genres tracked yet",
+                value: "No tracked genres",
                 icon: "tag.fill"
             )
             contentStack.addArrangedSubview(emptyCard)
@@ -77,7 +77,7 @@ final class StatsViewController: UIViewController {
         
         // Monthly Counts (if available)
         let monthlyCounts = calculator.monthlyCounts
-        if !monthlyCounts.isEmpty {
+        if monthlyCounts.isEmpty {
             let monthlyCard = createMonthlyCard(counts: monthlyCounts)
             contentStack.addArrangedSubview(monthlyCard)
         }
@@ -85,7 +85,7 @@ final class StatsViewController: UIViewController {
     
     private func createStatCard(title: String, value: String, icon: String) -> UIView {
         let card = UIView()
-        card.backgroundColor = .secondarySystemBackground
+        card.backgroundColor = .card
         card.layer.cornerRadius = 16
         card.translatesAutoresizingMaskIntoConstraints = false
         
@@ -131,7 +131,7 @@ final class StatsViewController: UIViewController {
     
     private func createGenresCard(genres: [(genre: String, count: Int)]) -> UIView {
         let card = UIView()
-        card.backgroundColor = .secondarySystemBackground
+        card.backgroundColor = .card
         card.layer.cornerRadius = 16
         card.translatesAutoresizingMaskIntoConstraints = false
         
@@ -212,7 +212,7 @@ final class StatsViewController: UIViewController {
     
     private func createMonthlyCard(counts: [Int: Int]) -> UIView {
         let card = UIView()
-        card.backgroundColor = .secondarySystemBackground
+        card.backgroundColor = .card
         card.layer.cornerRadius = 16
         card.translatesAutoresizingMaskIntoConstraints = false
         

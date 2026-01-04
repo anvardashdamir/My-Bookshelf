@@ -6,85 +6,124 @@
 //
 
 import Foundation
+import FirebaseAuth
 
 final class AuthManager {
 
     static let shared = AuthManager()
 
-    private let usersKey = "registered_users"
-    private let currentUserKey = "current_user_email"
-
     private init() {}
 
     // MARK: - State
+    var currentUser: User? {
+        Auth.auth().currentUser
+    }
+    
+    var currentUserId: String? {
+        currentUser?.uid
+    }
+    
     var currentUserEmail: String? {
-        KeychainHelper.shared.load(key: currentUserKey)
+        currentUser?.email
     }
 
     var isLoggedIn: Bool {
-        currentUserEmail != nil
+        currentUser != nil
     }
 
     // MARK: - Actions
-    func register(email: String, password: String) throws {
-        var users = loadUsers()
-        let email = email.lowercased()
-
-        guard users[email] == nil else {
-            throw AuthError.emailAlreadyInUse
+    func register(email: String, password: String) async throws {
+        let cleanedEmail = email.lowercased()
+        do {
+            let authResult = try await Auth.auth().createUser(withEmail: cleanedEmail, password: password)
+            print("✅ Firebase Auth user created: \(authResult.user.uid)")
+        } catch {
+            if let nsError = error as NSError?,
+               nsError.domain == "FIRAuthErrorDomain",
+               nsError.code == 17007 {
+                throw AuthError.emailAlreadyInUse
+            }
+            throw error
         }
-
-        users[email] = password
-        saveUsers(users)
-        setCurrentUser(email)
     }
 
-    func login(email: String, password: String) throws {
-        let users = loadUsers()
-        let email = email.lowercased()
+    func login(email: String, password: String) async throws {
+        let cleanedEmail = email.lowercased()
+        do {
+            let authResult = try await Auth.auth().signIn(withEmail: cleanedEmail, password: password)
+            print("✅ Firebase Auth login successful: \(authResult.user.uid)")
+        } catch {
+            if let nsError = error as NSError?,
+               nsError.domain == "FIRAuthErrorDomain" {
+                switch nsError.code {
+                case 17011:
+                    throw AuthError.userNotFound
+                case 17009:
+                    throw AuthError.invalidPassword
+                default:
+                    throw error
+                }
+            }
+            throw error
+        }
+    }
 
-        guard let storedPassword = users[email] else {
+    func logout() throws {
+        try Auth.auth().signOut()
+        print("✅ Firebase Auth logout successful")
+        clearUserData()
+    }
+    
+    private func clearUserData() {
+        ProfileManager.shared.clearProfile()
+        ListsManager.shared.clearAllLists()
+        RecentlyViewedStore.shared.clearAll()
+        print("✅ All user data cleared (profile, lists, recently viewed)")
+    }
+
+    func deleteAccount(passwordForReauth: String?) async throws {
+        guard let user = currentUser else {
             throw AuthError.userNotFound
         }
-
-        guard storedPassword == password else {
-            throw AuthError.invalidPassword
+        
+        let userId = user.uid
+        
+        // First delete all Firestore data
+        try await FirebaseUserDataService.shared.deleteAllUserData(userId: userId)
+        
+        // Then delete Firebase Auth user
+        do {
+            try await user.delete()
+            print("✅ Firebase Auth account deleted")
+        } catch {
+            // Check if error is requiresRecentLogin
+            if let nsError = error as NSError?,
+               nsError.domain == "FIRAuthErrorDomain",
+               nsError.code == 17014 {
+                // Requires recent login - need to reauthenticate
+                guard let password = passwordForReauth else {
+                    throw AuthError.requiresRecentLogin
+                }
+                
+                // Reauthenticate with email and password
+                guard let email = user.email else {
+                    throw AuthError.userNotFound
+                }
+                
+                let credential = EmailAuthProvider.credential(withEmail: email, password: password)
+                try await user.reauthenticate(with: credential)
+                print("✅ Reauthentication successful")
+                
+                // Retry delete after reauthentication
+                try await user.delete()
+                print("✅ Firebase Auth account deleted after reauthentication")
+            } else {
+                throw error
+            }
         }
-
-        setCurrentUser(email)
-    }
-
-    func logout() {
-        clearCurrentUser()
-    }
-
-    func deleteAccount() {
-        guard let email = currentUserEmail else { return }
-
-        var users = loadUsers()
-        users.removeValue(forKey: email.lowercased())
-        saveUsers(users)
-        clearCurrentUser()
-    }
-
-    // MARK: - Private helpers
-    private func setCurrentUser(_ email: String) {
-        _ = KeychainHelper.shared.save(key: currentUserKey, value: email)
-    }
-
-    private func clearCurrentUser() {
-        _ = KeychainHelper.shared.delete(key: currentUserKey)
-    }
-
-    private func loadUsers() -> [String: String] {
-        KeychainHelper.shared.loadDictionary(key: usersKey) ?? [:]
-    }
-
-    private func saveUsers(_ users: [String: String]) {
-        _ = KeychainHelper.shared.saveDictionary(
-            key: usersKey,
-            dictionary: users
-        )
+        
+        // Finally clear local data
+        clearUserData()
     }
 }
 
@@ -92,6 +131,7 @@ enum AuthError: LocalizedError {
     case emailAlreadyInUse
     case userNotFound
     case invalidPassword
+    case requiresRecentLogin
     
     var errorDescription: String? {
         switch self {
@@ -101,6 +141,8 @@ enum AuthError: LocalizedError {
             return "No user found with this email."
         case .invalidPassword:
             return "Incorrect password."
+        case .requiresRecentLogin:
+            return "For security, please enter your password to confirm account deletion."
         }
     }
 }

@@ -14,7 +14,7 @@ final class ExploreSectionHeaderView: UICollectionReusableView {
     private let titleLabel: UILabel = {
         let label = UILabel()
         label.font = .boldSystemFont(ofSize: 20)
-        label.textColor = .red
+        label.textColor = .sectionHeader
         return label
     }()
 

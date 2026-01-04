@@ -63,5 +63,12 @@ final class ProfileManager {
             profilePhoto = photo
         }
     }
+    
+    func clearProfile() {
+        UserDefaults.standard.removeObject(forKey: nameKey)
+        UserDefaults.standard.removeObject(forKey: emailKey)
+        UserDefaults.standard.removeObject(forKey: photoKey)
+        print("✅ ProfileManager: All profile data cleared")
+    }
 }
 

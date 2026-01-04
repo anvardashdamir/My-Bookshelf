@@ -8,9 +8,9 @@
 import UIKit
 
 enum HomeSection: Int, CaseIterable {
-    case recentlyViewed = 0
-    case statistics = 1
-    case discover = 2
+    case discover = 0
+    case recentlyViewed = 1
+    case statistics = 2
 }
 
 final class HomeViewController: UIViewController {
@@ -44,12 +44,12 @@ final class HomeViewController: UIViewController {
             }
             
             switch section {
+            case .discover:
+                return self.createDiscoverSection()
             case .recentlyViewed:
                 return self.createHorizontalScrollSection()
             case .statistics:
                 return self.createStatisticsSection()
-            case .discover:
-                return self.createDiscoverSection()
             }
         }
         
@@ -61,16 +61,16 @@ final class HomeViewController: UIViewController {
         
         // Register cells
         collectionView.register(
-            RecentlyViewedCell.self,
-            forCellWithReuseIdentifier: RecentlyViewedCell.reuseIdentifier
+            SubjectCell.self,
+            forCellWithReuseIdentifier: SubjectCell.reuseIdentifier
         )
         collectionView.register(
             StatsCardCell.self,
             forCellWithReuseIdentifier: StatsCardCell.reuseIdentifier
         )
         collectionView.register(
-            SubjectCell.self,
-            forCellWithReuseIdentifier: SubjectCell.reuseIdentifier
+            RecentlyViewedCell.self,
+            forCellWithReuseIdentifier: RecentlyViewedCell.reuseIdentifier
         )
         
         // Register header
@@ -206,12 +206,12 @@ extension HomeViewController: UICollectionViewDataSource {
         guard let homeSection = HomeSection(rawValue: section) else { return 0 }
         
         switch homeSection {
+        case .discover:
+            return subjects.count
         case .recentlyViewed:
             return recentlyViewedBooks.count
         case .statistics:
             return 1
-        case .discover:
-            return subjects.count
         }
     }
     
@@ -267,12 +267,12 @@ extension HomeViewController: UICollectionViewDataSource {
         
         let title: String
         switch section {
+        case .discover:
+            title = "Discover by Subject"
         case .recentlyViewed:
             title = "Recently Viewed"
         case .statistics:
-            title = "2025 Statistics"
-        case .discover:
-            title = "Discover by Subject"
+            title = "Statistics"
         }
         
         header.configure(with: title)
@@ -286,6 +286,11 @@ extension HomeViewController: UICollectionViewDelegate {
         guard let section = HomeSection(rawValue: indexPath.section) else { return }
         
         switch section {
+        case .discover:
+            let subjectName = subjects[indexPath.item]
+            let subjectVC = SubjectBooksViewController(subjectName: subjectName)
+            navigationController?.pushViewController(subjectVC, animated: true)
+
         case .recentlyViewed:
             // Tapping a book in Recently Viewed opens BookDetailViewController
             let book = recentlyViewedBooks[indexPath.item]
@@ -297,10 +302,6 @@ extension HomeViewController: UICollectionViewDelegate {
             let statsVC = StatsViewController()
             navigationController?.pushViewController(statsVC, animated: true)
             
-        case .discover:
-            let subjectName = subjects[indexPath.item]
-            let subjectVC = SubjectBooksViewController(subjectName: subjectName)
-            navigationController?.pushViewController(subjectVC, animated: true)
         }
     }
 }

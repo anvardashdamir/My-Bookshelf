@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 protocol AuthFlowDelegate: AnyObject {
     func didAuthenticate()
@@ -15,6 +16,16 @@ protocol AuthFlowDelegate: AnyObject {
 final class LoginViewController: BaseController {
 
     weak var delegate: AuthFlowDelegate?
+    
+    init(delegate: AuthFlowDelegate) {
+          self.delegate = delegate
+          super.init(nibName: nil, bundle: nil)
+      }
+    
+    @available(*, unavailable)
+       required init?(coder: NSCoder) {
+           fatalError("init(coder:) is not supported")
+       }
 
     // MARK: - UI
     private let logoImageView = LogoImageView()
@@ -96,20 +107,86 @@ final class LoginViewController: BaseController {
 extension LoginViewController {
 
     @objc func didTapLogin() {
-        do {
-            try AuthManager.shared.login(
-                email: emailField.text ?? "",
-                password: passwordField.text ?? ""
-            )
-            delegate?.didAuthenticate()
-        } catch {
-            showAlert(message: error.localizedDescription)
+        guard let email = emailField.text, !email.isEmpty,
+              let password = passwordField.text, !password.isEmpty else {
+            showAlert(message: "Please enter email and password")
+            return
+        }
+        
+        guard let delegate = delegate else {
+            showAlert(message: "Authentication error: Please restart the app")
+            return
+        }
+        
+        Task {
+            do {
+                print("🔄 Attempting login for: \(email)")
+                try await AuthManager.shared.login(email: email, password: password)
+                print("✅ Login successful!")
+                
+                guard let userId = AuthManager.shared.currentUserId else {
+                    print("❌ ERROR: Login successful but currentUser is nil!")
+                    await MainActor.run {
+                        self.showAlert(message: "Login failed: Unable to get user ID")
+                    }
+                    return
+                }
+                
+                print("   User ID: \(userId)")
+                print("   Email: \(AuthManager.shared.currentUserEmail ?? "unknown")")
+                
+                print("🔄 Loading user profile from Firebase...")
+                do {
+                    let profile = try await FirebaseProfileService.shared.fetchProfile(userId: userId)
+                    ProfileManager.shared.updateProfile(
+                        name: profile.name,
+                        email: profile.email,
+                        photo: nil
+                    )
+                    
+                    // Load profile photo if exists
+                    if let photoURL = profile.photoURL {
+                        do {
+                            let image = try await FirebaseProfileService.shared.fetchProfilePhoto(urlString: photoURL)
+                            if let image = image {
+                                ProfileManager.shared.updateProfile(name: nil, email: nil, photo: image)
+                            }
+                        } catch {
+                            print("⚠️ Could not load profile photo: \(error.localizedDescription)")
+                        }
+                    }
+                    print("✅ Profile loaded from Firebase: \(profile.name)")
+                } catch {
+                    print("⚠️ Could not load profile from Firebase: \(error.localizedDescription)")
+                }
+                
+                // Load saved books from Firebase
+                print("🔄 Loading saved books from Firebase...")
+                do {
+                    let bookDTOs = try await FirebaseBooksService.shared.fetchBooks(uid: userId)
+                    print("✅ Fetched \(bookDTOs.count) saved books")
+                    
+                    await MainActor.run {
+                        ListsManager.shared.replaceAll(with: bookDTOs)
+                    }
+                } catch {
+                    print("⚠️ Could not load books from Firebase: \(error.localizedDescription)")
+                }
+                
+                await MainActor.run {
+                    delegate.didAuthenticate()
+                }
+            } catch {
+                print("❌ Login error: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.showAlert(message: error.localizedDescription)
+                }
+            }
         }
     }
-
+    
     @objc func didTapRegister() {
-        let vc = RegisterViewController()
-        vc.delegate = delegate
+        let vc = RegisterViewController(delegate: delegate!)
         navigationController?.pushViewController(vc, animated: true)
     }
 }

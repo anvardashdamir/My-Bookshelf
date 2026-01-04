@@ -10,13 +10,16 @@ import UIKit
 class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     
     var window: UIWindow?
-    private var authCoordinator: AuthCoordinator?
+    var authCoordinator: AuthCoordinator?
     
     func scene(_ scene: UIScene, willConnectTo session: UISceneSession, options connectionOptions: UIScene.ConnectionOptions) {
         guard let windowScene = scene as? UIWindowScene else { return }
         
         let window = UIWindow(windowScene: windowScene)
+        window.backgroundColor = .appBackground
         self.window = window
+        
+        AppAppearance.apply()
         
         authCoordinator = AuthCoordinator(window: window)
         authCoordinator?.start()

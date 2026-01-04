@@ -7,6 +7,7 @@
 
 import UIKit
 import Alamofire
+import FirebaseAuth
 
 final class BookDetailViewController: UIViewController {
 
@@ -123,9 +124,25 @@ final class BookDetailViewController: UIViewController {
     private func showListPicker() {
         let listPickerVC = ListPickerViewController(book: book)
         listPickerVC.onListSelected = { [weak self] list in
-            guard let self = self else { return }
-            ListsManager.shared.addBook(self.book, toListId: list.id)
-            self.showAddedToListAnimation(listName: list.name)
+            guard let self = self,
+                  let userId = AuthManager.shared.currentUserId else { return }
+            
+            Task {
+                do {
+                    try await ListsManager.shared.addBookToFirebase(
+                        book: self.book,
+                        listType: list.type,
+                        uid: userId
+                    )
+                    await MainActor.run {
+                        self.showAddedToListAnimation(listName: list.name)
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.showAlert(message: "Failed to save book: \(error.localizedDescription)")
+                    }
+                }
+            }
         }
         let nav = UINavigationController(rootViewController: listPickerVC)
         present(nav, animated: true)

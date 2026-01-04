@@ -39,8 +39,8 @@ extension ProfileViewController {
         )
         profileImageView.addGestureRecognizer(imageTap)
 
-        // Edit profile
-        editButton.addTarget(
+        // Edit profile icon
+        editIconButton.addTarget(
             self,
             action: #selector(editProfileTapped),
             for: .touchUpInside
@@ -81,7 +81,12 @@ extension ProfileViewController {
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Log Out", style: .destructive) { [weak self] _ in
-            self?.coordinator?.didRequestLogout()
+            do {
+                try self?.viewModel.logout()
+                self?.authDelegate?.didRequestLogout()
+            } catch {
+                self?.showAlert(message: "Logout failed: \(error.localizedDescription)")
+            }
         })
 
         present(alert, animated: true)
@@ -90,31 +95,93 @@ extension ProfileViewController {
     @objc private func deleteAccountTapped() {
         let alert = UIAlertController(
             title: "Delete Account",
-            message: "This action cannot be undone.",
+            message: "This action cannot be undone. All your data will be permanently deleted.",
             preferredStyle: .alert
         )
 
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-            Task {
-                do {
-                    try await self?.viewModel.deleteAccount()
-                    self?.coordinator?.didRequestAccountDeletion()
-                } catch {
-                    self?.showAlert(message: error.localizedDescription)
-                }
-            }
+            self?.attemptDeleteAccount(password: nil)
         })
 
         present(alert, animated: true)
     }
+    
+    private func attemptDeleteAccount(password: String?) {
+        Task {
+            do {
+                try await viewModel.deleteAccount(passwordForReauth: password)
+                await MainActor.run {
+                    self.authDelegate?.didRequestLogout()
+                }
+            } catch {
+                await MainActor.run {
+                    if case AuthError.requiresRecentLogin = error {
+                        self.showReauthenticationAlert()
+                    } else {
+                        self.showAlert(message: error.localizedDescription)
+                    }
+                }
+            }
+        }
+    }
+    
+    private func showReauthenticationAlert() {
+        let alert = UIAlertController(
+            title: "Confirm Password",
+            message: "For security, please enter your password to confirm account deletion.",
+            preferredStyle: .alert
+        )
+        
+        alert.addTextField { textField in
+            textField.placeholder = "Password"
+            textField.isSecureTextEntry = true
+            textField.textContentType = .password
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            guard let password = alert.textFields?.first?.text, !password.isEmpty else {
+                self?.showAlert(message: "Password is required")
+                return
+            }
+            self?.attemptDeleteAccount(password: password)
+        })
+        
+        present(alert, animated: true)
+    }
+    
 
     @objc private func profileImageTapped() {
         showImageSourceAlert()
     }
 
     @objc private func editProfileTapped() {
-        coordinator?.didRequestEditProfile()
+        let alert = UIAlertController(
+            title: "Edit Name",
+            message: "Enter your new name",
+            preferredStyle: .alert
+        )
+        
+        alert.addTextField { [weak self] textField in
+            textField.text = self?.viewModel.userName
+            textField.placeholder = "Name"
+            textField.autocapitalizationType = .words
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+            guard let textField = alert.textFields?.first,
+                  let newName = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !newName.isEmpty else {
+                return
+            }
+            
+            self?.viewModel.updateProfile(name: newName, email: nil, photo: nil)
+            self?.renderProfile()
+        })
+        
+        present(alert, animated: true)
     }
 
     @objc private func privacyTapped() {
@@ -170,7 +237,39 @@ extension ProfileViewController: UIImagePickerControllerDelegate, UINavigationCo
         }
         
         profileImageView.image = image
-        viewModel.updateProfile(name: nil, email: nil, photo: image)
+        
+        // Upload to Firebase Storage and update Firestore
+        Task {
+            guard let userId = AuthManager.shared.currentUserId else {
+                await MainActor.run {
+                    self.showAlert(message: "Unable to upload photo: User not authenticated")
+                }
+                return
+            }
+            
+            do {
+                // Upload to Storage
+                let photoURL = try await FirebaseProfileService.shared.uploadProfilePhoto(image, userId: userId)
+                print("✅ Profile photo uploaded: \(photoURL)")
+                
+                // Update Firestore profile with photoURL
+                let currentProfile = try await FirebaseProfileService.shared.fetchProfile(userId: userId)
+                var updatedProfile = currentProfile
+                updatedProfile.photoURL = photoURL
+                try await FirebaseProfileService.shared.saveProfile(updatedProfile, userId: userId)
+                print("✅ Profile updated with photoURL")
+                
+                // Update local ProfileManager
+                await MainActor.run {
+                    self.viewModel.updateProfile(name: nil, email: nil, photo: image)
+                }
+            } catch {
+                print("❌ Error uploading profile photo: \(error.localizedDescription)")
+                await MainActor.run {
+                    self.showAlert(message: "Failed to upload photo: \(error.localizedDescription)")
+                }
+            }
+        }
     }
     
     func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {

@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 final class ListBooksViewController: UIViewController {
 
@@ -53,6 +54,7 @@ final class ListBooksViewController: UIViewController {
         view.backgroundColor = .appBackground
         title = list.name
         setupUI()
+        setupLongPressGesture()
         loadBooks()
     }
     
@@ -85,6 +87,66 @@ final class ListBooksViewController: UIViewController {
             books = updatedList.books
             emptyStateLabel.isHidden = !books.isEmpty
             collectionView.reloadData()
+        }
+    }
+    
+    private func setupLongPressGesture() {
+        let longPress = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPress(_:)))
+        longPress.minimumPressDuration = 0.5
+        collectionView.addGestureRecognizer(longPress)
+    }
+    
+    @objc private func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        
+        let point = gesture.location(in: collectionView)
+        guard let indexPath = collectionView.indexPathForItem(at: point) else { return }
+        
+        let book = books[indexPath.item]
+        showRemoveConfirmation(book: book, at: indexPath)
+    }
+    
+    private func showRemoveConfirmation(book: BookResponse, at indexPath: IndexPath) {
+        let alert = UIAlertController(
+            title: "Remove Book",
+            message: "Remove \"\(book.title)\" from this list?",
+            preferredStyle: .actionSheet
+        )
+        
+        alert.addAction(UIAlertAction(title: "Remove", style: .destructive) { [weak self] _ in
+            self?.removeBook(book, at: indexPath)
+        })
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        // For iPad
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = collectionView
+            popover.sourceRect = collectionView.cellForItem(at: indexPath)?.frame ?? .zero
+        }
+        
+        present(alert, animated: true)
+    }
+    
+    private func removeBook(_ book: BookResponse, at indexPath: IndexPath) {
+        // 1. Remove from UI
+        books.remove(at: indexPath.item)
+        collectionView.deleteItems(at: [indexPath])
+        emptyStateLabel.isHidden = !books.isEmpty
+        
+        // 2. Remove from ListsManager
+        ListsManager.shared.removeBook(book, fromListId: list.id)
+        
+        // 3. Remove from Firebase if uid exists
+        if let uid = Auth.auth().currentUser?.uid {
+            Task {
+                do {
+                    try await FirebaseBooksService.shared.removeBook(uid: uid, bookId: book.id)
+                    print("✅ Book removed from Firebase: \(book.id)")
+                } catch {
+                    print("⚠️ Failed to remove book from Firebase: \(error.localizedDescription)")
+                }
+            }
         }
     }
 }

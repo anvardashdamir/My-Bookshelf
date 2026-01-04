@@ -36,5 +36,10 @@ final class RecentlyViewedStore {
         books.removeAll()
         onBooksDidChange?()
     }
+    
+    func clearAll() {
+        clear()
+        print("✅ RecentlyViewedStore: All recently viewed books cleared")
+    }
 }
 

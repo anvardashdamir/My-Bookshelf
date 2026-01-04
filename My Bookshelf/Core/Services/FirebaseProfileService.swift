@@ -23,28 +23,25 @@ final class FirebaseProfileService {
     // MARK: - Profile Data Methods (Firestore)
     
     func fetchProfile(userId: String) async throws -> UserProfile {
-        let docRef = db.collection("users")
-            .document(userId)
-            .collection("data")
-            .document("profile")
+        let docRef = db.collection("users").document(userId)
         
         let doc = try await docRef.getDocument()
         if doc.exists {
-            // Document exists - convert to UserProfile struct
             return try doc.data(as: UserProfile.self)
         } else {
-            // Document doesn't exist - return default profile
-            return UserProfile(name: "John Smith", email: "", photoURL: nil)
+            return UserProfile(name: "John Smith", email: "", photoURL: nil, createdAt: Date())
         }
     }
     
     func saveProfile(_ profile: UserProfile, userId: String) async throws {
-        // Save profile to Firestore (creates or updates document)
+        // Ensure email is lowercased
+        var profileToSave = profile
+        profileToSave.email = profile.email.lowercased()
+        
+        // Save profile to users/{uid} document
         try db.collection("users")
             .document(userId)
-            .collection("data")
-            .document("profile")
-            .setData(from: profile) // Codable conversion happens here
+            .setData(from: profileToSave, merge: true)
     }
     
     // MARK: - Profile Photo Methods (Firebase Storage)
@@ -76,9 +73,9 @@ final class FirebaseProfileService {
         let photoRef = storage.reference()
             .child("users")
             .child(userId)
-            .child("profile_photo.jpg")
+            .child("profile.jpg")
         
-        print("   Uploading profile photo to: users/\(userId)/profile_photo.jpg")
+        print("   Uploading profile photo to: users/\(userId)/profile.jpg")
         print("   Image size: \(imageData.count) bytes")
         print("   User ID: \(userId)")
         print("   Authenticated User ID: \(currentUserId)")
@@ -142,7 +139,7 @@ final class FirebaseProfileService {
         let photoRef = storage.reference()
             .child("users")
             .child(userId)
-            .child("profile_photo.jpg")
+            .child("profile.jpg")
         
         try await photoRef.delete()
     }
@@ -152,6 +149,14 @@ struct UserProfile: Codable {
     var name: String
     var email: String
     var photoURL: String?
+    var createdAt: Date?
+    
+    init(name: String, email: String, photoURL: String?, createdAt: Date? = nil) {
+        self.name = name
+        self.email = email.lowercased()
+        self.photoURL = photoURL
+        self.createdAt = createdAt ?? Date()
+    }
 }
 
 enum FirebaseProfileError: LocalizedError {

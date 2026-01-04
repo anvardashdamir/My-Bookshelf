@@ -6,10 +6,21 @@
 //
 
 import UIKit
+import FirebaseAuth
 
 final class RegisterViewController: BaseController {
 
     weak var delegate: AuthFlowDelegate?
+    
+    init(delegate: AuthFlowDelegate) {
+           self.delegate = delegate
+           super.init(nibName: nil, bundle: nil)
+       }
+
+       @available(*, unavailable)
+       required init?(coder: NSCoder) {
+           fatalError("init(coder:) is not supported")
+       }
 
     // MARK: - UI
     private let logoImageView = LogoImageView()
@@ -90,15 +101,55 @@ final class RegisterViewController: BaseController {
 private extension RegisterViewController {
 
     @objc func didTapRegister() {
-         do {
-             try AuthManager.shared.register(
-                 email: emailField.text ?? "",
-                 password: passwordField.text ?? ""
-             )
-             delegate?.didAuthenticate()
-         } catch {
-             showAlert(message: error.localizedDescription)
-         }
+        guard let email = emailField.text, !email.isEmpty,
+              let password = passwordField.text, !password.isEmpty,
+              let name = nameField.text, !name.isEmpty else {
+            showAlert(message: "Please fill in all fields")
+            return
+        }
+        
+        guard password == confirmPasswordField.text else {
+            showAlert(message: "Passwords do not match")
+            return
+        }
+        
+        guard let delegate = delegate else {
+            showAlert(message: "Authentication error: Please restart the app")
+            return
+        }
+        
+        Task {
+            do {
+                let cleanedEmail = email.lowercased()
+                print("🔄 Starting registration for: \(cleanedEmail)")
+                try await AuthManager.shared.register(email: cleanedEmail, password: password)
+                
+                guard let userId = AuthManager.shared.currentUserId else {
+                    print("❌ ERROR: Firebase Auth user created but currentUser is nil!")
+                    throw NSError(domain: "RegisterViewController", code: 500, userInfo: [NSLocalizedDescriptionKey: "Failed to get user ID after registration"])
+                }
+                
+                print("✅ Firebase Auth user created successfully!")
+                print("   User ID: \(userId)")
+                print("   Email: \(AuthManager.shared.currentUserEmail ?? "unknown")")
+                
+                // Store lowercased email in Firestore with createdAt
+                let profile = UserProfile(name: name, email: cleanedEmail, photoURL: nil, createdAt: Date())
+                try await FirebaseProfileService.shared.saveProfile(profile, userId: userId)
+                print("✅ Profile saved to Firestore")
+                
+                ProfileManager.shared.updateProfile(name: name, email: cleanedEmail, photo: nil)
+                print("✅ Registration complete for: \(cleanedEmail)")
+                
+                await MainActor.run {
+                    delegate.didAuthenticate()
+                }
+            } catch {
+                await MainActor.run {
+                    self.showAlert(message: error.localizedDescription)
+                }
+            }
+        }
      }
     
     @objc func didTapLogin() {

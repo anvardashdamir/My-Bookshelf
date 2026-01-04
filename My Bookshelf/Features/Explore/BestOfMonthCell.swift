@@ -28,17 +28,17 @@ final class BestOfMonthCell: UICollectionViewCell {
     private func setupUI() {
         contentView.layer.cornerRadius = 16
         contentView.layer.masksToBounds = true
-        contentView.backgroundColor = UIColor(red: 195/255, green: 172/255, blue: 131/255, alpha: 1) // explore screen "best of the month" view color
+        contentView.backgroundColor = .bestOfMonthCard
 
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
 
         titleLabel.font = .boldSystemFont(ofSize: 20)
         titleLabel.numberOfLines = 2
-        titleLabel.textColor = .label
+        titleLabel.textColor = .cardTitle
 
         subtitleLabel.font = .systemFont(ofSize: 14)
-        subtitleLabel.textColor = .secondaryLabel
+        subtitleLabel.textColor = .cardSubtitle
         subtitleLabel.numberOfLines = 1
 
         let textStack = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel])

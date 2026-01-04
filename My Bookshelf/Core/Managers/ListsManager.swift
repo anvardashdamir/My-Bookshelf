@@ -30,6 +30,52 @@ final class ListsManager {
         lists.first { $0.id == id }
     }
     
+    func getList(byType type: ListType) -> BookList? {
+        lists.first { $0.type == type }
+    }
+    
+    func replaceAll(with firebaseBooks: [BookDTO]) {
+        // Clear all lists
+        lists = [
+            BookList(name: "Currently Reading", type: .currentlyReading),
+            BookList(name: "Finished", type: .finished),
+            BookList(name: "Want to Read", type: .wantToRead)
+        ]
+        
+        // Map books by status to appropriate lists
+        for bookDTO in firebaseBooks {
+            let book = bookDTO.toBookResponse()
+            let status = bookDTO.status ?? "Want to Read"
+            
+            // Map status to ListType
+            let listType: ListType
+            switch status {
+            case "Currently Reading":
+                listType = .currentlyReading
+            case "Finished":
+                listType = .finished
+            case "Want to Read":
+                listType = .wantToRead
+            default:
+                listType = .wantToRead
+            }
+            
+            addBook(book, toListType: listType)
+        }
+        
+        onListsDidChange?()
+        print("✅ ListsManager: Replaced with \(firebaseBooks.count) books from Firebase")
+    }
+    
+    func addBook(_ book: BookResponse, toListType listType: ListType) {
+        guard let list = getList(byType: listType),
+              let index = lists.firstIndex(where: { $0.id == list.id }) else { return }
+        
+        if !lists[index].books.contains(book) {
+            lists[index].books.append(book)
+        }
+    }
+    
     func addBook(_ book: BookResponse, toListId listId: UUID) {
         guard let index = lists.firstIndex(where: { $0.id == listId }) else { return }
         
@@ -43,6 +89,28 @@ final class ListsManager {
         guard let index = lists.firstIndex(where: { $0.id == listId }) else { return }
         lists[index].books.removeAll { $0 == book }
         onListsDidChange?()
+    }
+    
+    func addBookToFirebase(book: BookResponse, listType: ListType, uid: String) async throws {
+        let bookDTO = BookDTO(from: book, status: listType.rawValue)
+        try await FirebaseBooksService.shared.saveBook(uid: uid, book: bookDTO)
+        
+        await MainActor.run {
+            addBook(book, toListType: listType)
+            onListsDidChange?()
+        }
+    }
+    
+    func removeBookFromFirebase(book: BookResponse, uid: String) async throws {
+        try await FirebaseBooksService.shared.removeBook(uid: uid, bookId: book.id)
+        
+        // Remove from all lists locally
+        await MainActor.run {
+            for index in lists.indices {
+                lists[index].books.removeAll { $0 == book }
+            }
+            onListsDidChange?()
+        }
     }
     
     func createCustomList(name: String) {
@@ -65,6 +133,16 @@ final class ListsManager {
         guard !trimmed.isEmpty else { return }
         lists[index].name = trimmed
         onListsDidChange?()
+    }
+    
+    func clearAllLists() {
+        lists = [
+            BookList(name: "Currently Reading", type: .currentlyReading),
+            BookList(name: "Finished", type: .finished),
+            BookList(name: "Want to Read", type: .wantToRead)
+        ]
+        onListsDidChange?()
+        print("✅ ListsManager: All lists cleared and reset to defaults")
     }
 }
 

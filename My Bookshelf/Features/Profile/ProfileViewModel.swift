@@ -34,6 +34,35 @@ final class ProfileViewModel {
     var profileImage: UIImage? {
         ProfileManager.shared.profilePhoto
     }
+    
+    func loadProfileFromFirebase() async throws {
+        guard let userId = authManager.currentUserId else {
+            print("⚠️ No user ID available to load profile")
+            return
+        }
+        
+        print("🔄 Loading profile from Firebase for user: \(userId)")
+        let profile = try await FirebaseProfileService.shared.fetchProfile(userId: userId)
+        
+        ProfileManager.shared.updateProfile(
+            name: profile.name,
+            email: profile.email,
+            photo: nil
+        )
+        
+        if let photoURL = profile.photoURL {
+            do {
+                let image = try await FirebaseProfileService.shared.fetchProfilePhoto(urlString: photoURL)
+                if let image = image {
+                    ProfileManager.shared.updateProfile(name: nil, email: nil, photo: image)
+                }
+            } catch {
+                print("⚠️ Could not load profile photo: \(error.localizedDescription)")
+            }
+        }
+        
+        print("✅ Profile loaded from Firebase: \(profile.name) - \(profile.email)")
+    }
 
     func logout() throws {
         try AuthManager.shared.logout()
@@ -49,8 +78,8 @@ final class ProfileViewModel {
            )
        }
 
-    func deleteAccount() async throws {
-        authManager.deleteAccount()
+    func deleteAccount(passwordForReauth: String?) async throws {
+        try await authManager.deleteAccount(passwordForReauth: passwordForReauth)
     }
     
     private func loadProfileImage() -> UIImage? {
