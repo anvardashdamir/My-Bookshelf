@@ -138,7 +138,7 @@ private extension RegisterViewController {
                 try await FirebaseProfileService.shared.saveProfile(profile, userId: userId)
                 print("✅ Profile saved to Firestore")
                 
-                ProfileManager.shared.updateProfile(name: name, email: cleanedEmail, photo: nil)
+                ProfileRepository.shared.updateProfile(name: name, email: cleanedEmail, photo: nil)
                 print("✅ Registration complete for: \(cleanedEmail)")
                 
                 await MainActor.run {

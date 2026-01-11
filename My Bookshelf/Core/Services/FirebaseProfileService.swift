@@ -126,13 +126,13 @@ final class FirebaseProfileService {
         }
     }
     
-    func fetchProfilePhoto(urlString: String) async throws -> UIImage? {
+    func fetchProfilePhoto(urlString: String) async throws -> Data? {
         guard let url = URL(string: urlString) else {
             return nil
         }
         
         let (data, _) = try await URLSession.shared.data(from: url)
-        return UIImage(data: data)
+        return data
     }
     
     func deleteProfilePhoto(userId: String) async throws {

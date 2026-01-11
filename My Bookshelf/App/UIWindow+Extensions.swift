@@ -18,8 +18,7 @@ extension UIWindow {
         if let style = UserDefaults.standard.string(forKey: "userInterfaceStyle") {
             overrideUserInterfaceStyle = style == "dark" ? .dark : .light
         } else {
-            // Default to dark mode if no preference is saved
-            overrideUserInterfaceStyle = .dark
+            overrideUserInterfaceStyle = .light
         }
     }
 }

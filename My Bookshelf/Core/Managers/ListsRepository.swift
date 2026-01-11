@@ -1,5 +1,5 @@
 //
-//  ListsManager.swift
+//  ListsRepository.swift
 //  My Bookshelf
 //
 //  Created by Dashdemirli Enver on 16.11.25.
@@ -7,8 +7,8 @@
 
 import Foundation
 
-final class ListsManager {
-    static let shared = ListsManager()
+final class ListsRepository {
+    static let shared = ListsRepository()
     
     private(set) var lists: [BookList] = []
     
@@ -64,7 +64,7 @@ final class ListsManager {
         }
         
         onListsDidChange?()
-        print("✅ ListsManager: Replaced with \(firebaseBooks.count) books from Firebase")
+        print("✅ ListsRepository: Replaced with \(firebaseBooks.count) books from Firebase")
     }
     
     func addBook(_ book: BookResponse, toListType listType: ListType) {
@@ -142,7 +142,7 @@ final class ListsManager {
             BookList(name: "Want to Read", type: .wantToRead)
         ]
         onListsDidChange?()
-        print("✅ ListsManager: All lists cleared and reset to defaults")
+        print("✅ ListsRepository: All lists cleared and reset to defaults")
     }
 }
 

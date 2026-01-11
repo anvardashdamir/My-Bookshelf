@@ -138,7 +138,7 @@ extension LoginViewController {
                 print("🔄 Loading user profile from Firebase...")
                 do {
                     let profile = try await FirebaseProfileService.shared.fetchProfile(userId: userId)
-                    ProfileManager.shared.updateProfile(
+                    ProfileRepository.shared.updateProfile(
                         name: profile.name,
                         email: profile.email,
                         photo: nil
@@ -147,9 +147,8 @@ extension LoginViewController {
                     // Load profile photo if exists
                     if let photoURL = profile.photoURL {
                         do {
-                            let image = try await FirebaseProfileService.shared.fetchProfilePhoto(urlString: photoURL)
-                            if let image = image {
-                                ProfileManager.shared.updateProfile(name: nil, email: nil, photo: image)
+                            if let photoData = try await FirebaseProfileService.shared.fetchProfilePhoto(urlString: photoURL) {
+                                ProfileRepository.shared.updateProfile(name: nil, email: nil, photoData: photoData)
                             }
                         } catch {
                             print("⚠️ Could not load profile photo: \(error.localizedDescription)")
@@ -167,7 +166,7 @@ extension LoginViewController {
                     print("✅ Fetched \(bookDTOs.count) saved books")
                     
                     await MainActor.run {
-                        ListsManager.shared.replaceAll(with: bookDTOs)
+                        ListsRepository.shared.replaceAll(with: bookDTOs)
                     }
                 } catch {
                     print("⚠️ Could not load books from Firebase: \(error.localizedDescription)")

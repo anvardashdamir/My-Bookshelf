@@ -1,5 +1,5 @@
 //
-//  ProfileManager.swift
+//  ProfileRepository.swift
 //  My Bookshelf
 //
 //  Created by Dashdemirli Enver on 28.11.25.
@@ -7,8 +7,8 @@
 
 import UIKit
 
-final class ProfileManager {
-    static let shared = ProfileManager()
+final class ProfileRepository {
+    static let shared = ProfileRepository()
     
     private let nameKey = "user_profile_name"
     private let emailKey = "user_profile_email"
@@ -64,11 +64,29 @@ final class ProfileManager {
         }
     }
     
+    var profileImageData: Data? {
+        UserDefaults.standard.data(forKey: photoKey)
+    }
+    
+    func updateProfile(name: String?, email: String?, photoData: Data?) {
+        if let name = name, !name.isEmpty {
+            userName = name
+        }
+        if let email = email, !email.isEmpty {
+            userEmail = email
+        }
+        if let photoData = photoData {
+            UserDefaults.standard.set(photoData, forKey: photoKey)
+        } else {
+            UserDefaults.standard.removeObject(forKey: photoKey)
+        }
+    }
+    
     func clearProfile() {
         UserDefaults.standard.removeObject(forKey: nameKey)
         UserDefaults.standard.removeObject(forKey: emailKey)
         UserDefaults.standard.removeObject(forKey: photoKey)
-        print("✅ ProfileManager: All profile data cleared")
+        print("✅ ProfileRepository: All profile data cleared")
     }
 }
 

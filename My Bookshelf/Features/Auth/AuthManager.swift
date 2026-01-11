@@ -75,8 +75,8 @@ final class AuthManager {
     }
     
     private func clearUserData() {
-        ProfileManager.shared.clearProfile()
-        ListsManager.shared.clearAllLists()
+        ProfileRepository.shared.clearProfile()
+        ListsRepository.shared.clearAllLists()
         RecentlyViewedStore.shared.clearAll()
         print("✅ All user data cleared (profile, lists, recently viewed)")
     }
