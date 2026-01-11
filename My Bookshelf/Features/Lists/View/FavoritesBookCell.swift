@@ -1,5 +1,5 @@
 //
-//  FavouriteBookCell.swift
+//  FavoritesBookCell.swift
 //  My Bookshelf
 //
 //  Created by Dashdemirli Enver on 11.12.25.
@@ -8,8 +8,8 @@
 import UIKit
 import Foundation
 
-final class FavouriteBookCell: UICollectionViewCell {
-    static let reuseId = "FavouriteBookCell"
+final class FavoritesBookCell: UICollectionViewCell {
+    static let reuseId = "FavoritesBookCell"
 
     private let coverImageView: UIImageView = {
         let iv = UIImageView()
